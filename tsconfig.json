@@ -1,0 +1,27 @@
+{
+	"compilerOptions": {
+		"module": "Node16",
+		"target": "ES2022",
+		"outDir": "out",
+		"lib": [
+			"ES2022"
+		],
+		"sourceMap": true,
+		"rootDir": "src",
+		/* enable all strict type-checking options */
+		"strict": true,
+        /* Report error when not all code paths in function return a value. */
+		"noImplicitReturns": true,
+        /* Report errors for fallthrough cases in switch statement. */
+		"noFallthroughCasesInSwitch": true,
+  	    /* Report errors on unused parameters. */
+		"noUnusedParameters": true,
+		"allowUnreachableCode": false,
+		"allowUnusedLabels": false,
+		"exactOptionalPropertyTypes": false,
+		"noImplicitOverride": true,
+		"noPropertyAccessFromIndexSignature": true,
+		"noUncheckedIndexedAccess": true,
+		"noUnusedLocals": true,
+	}
+}

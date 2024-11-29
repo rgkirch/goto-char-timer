@@ -10,17 +10,52 @@ on:
 
 jobs:
   build:
-    runs-on: node:16
+    runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
+    - name: Checkout GotoCharTimer
+      uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
 
     - name: Install dependencies
-      run: npm ci --verbose
+      run: npm install
 
     - name: Run package script
       run: npm run package
 
     - name: Publish
       run: npm run publish
+
+    - name: Create release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        draft: false
+        prerelease: false
+
+    - name: Upload .vsix asset to GitHub
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./dist/*.tgz
+        asset_name: goto-char-timer.tgz
+        asset_content_type: application/zip
+
+    - name: Publish to VSCode Marketplace
+      run: npm vsce publish -p ${{ secrets.VSCODE_MARKETPLACE_TOKEN }}
+
+    - name: Publish to Open VSX
+      uses: HaaLeo/openvsx-publish-action@v1
+      id: publishToOpenVSX
+      with:
+        pat: ${{ secrets.OPEN_VSX_TOKEN }}

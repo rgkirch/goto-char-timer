@@ -1,6 +1,7 @@
 {
   "name": "goto-char-timer",
   "displayName": "goto-char-timer",
+  "publisher": "rgkirch",
   "description": "",
   "version": "0.0.1",
   "engines": {

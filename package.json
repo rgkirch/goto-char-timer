@@ -1,9 +1,10 @@
 {
   "name": "goto-char-timer",
-  "displayName": "goto-char-timer",
-  "publisher": "rgkirch",
+  "displayName": "GotoCharTimer",
   "description": "",
   "version": "0.0.1",
+  "publisher": "rgkirch",
+  "license": "MIT",
   "engines": {
     "vscode": "^1.95.0"
   },
@@ -22,9 +23,29 @@
         "command": "goto-char-timer",
         "title": "goto char timer"
       }
-    ]
+    ],
+    "keybindings": [
+      {
+        "command": "goto-char-timer",
+        "mac": "cmd+h"
+      }
+    ],
+    "configuration": {
+      "title": "Goto Char Timer",
+      "type": "object",
+      "properties": {
+        "gotoCharTimer.charset": {
+          "type": "string",
+          "default": "abcdefghijklmnopqrstuvwxyz",
+        },
+        "gotoCharTimer.timeout": {
+          "type": "number",
+          "default": 800
+        }
+      }
+    }
   },
-  "scripts": {
+  "scripts.bak": {
     "compile": "npm run check-types && node esbuild.js",
     "check-types": "tsc --noEmit",
     "watch": "npm-run-all -p watch:*",
@@ -33,6 +54,20 @@
     "vscode:prepublish": "npm run package",
     "package": "npm run check-types && node esbuild.js --production",
     "publish": "vsce package && vsce publish"
+  },
+  "scripts": {
+    "vscode:prepublish": "gulp build",
+    "build": "gulp build",
+    "build-dev": "gulp build-dev",
+    "build-test": "gulp prepare-test",
+    "test": "node ./out/test/runTest.js",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "prettier": "prettier --write .",
+    "prettier:check": "prettier --check .",
+    "watch": "webpack -c webpack.dev.js --watch",
+    "package": "yarn run vsce package --yarn --allow-star-activation",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@types/node": "20.x",
@@ -49,5 +84,9 @@
   },
   "dependencies": {
     "rxjs": "^7.8.1"
+  },
+  "lint-staged": {
+    "*.{ts,js,json,md,yml}": "prettier --write",
+    "*.ts": "eslint --fix"
   }
 }

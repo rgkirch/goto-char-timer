@@ -10,7 +10,7 @@ on:
 
 jobs:
   build:
-    runs-on: node:18
+    runs-on: node:16
 
     steps:
     - name: Checkout repository

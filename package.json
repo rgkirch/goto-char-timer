@@ -30,7 +30,8 @@
     "watch:esbuild": "node esbuild.js --watch",
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
     "vscode:prepublish": "npm run package",
-    "package": "npm run check-types && node esbuild.js --production && vsce package"
+    "package": "npm run check-types && node esbuild.js --production",
+    "publish": "vsce package && vsce publish"
   },
   "devDependencies": {
     "@types/node": "20.x",
@@ -42,7 +43,8 @@
     "esbuild": "^0.24.0",
     "eslint": "^9.13.0",
     "npm-run-all": "^4.1.5",
-    "typescript": "^5.6.3"
+    "typescript": "^5.6.3",
+    "vsce": "^2.15.0"
   },
   "dependencies": {
     "rxjs": "^7.8.1"

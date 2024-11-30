@@ -12,7 +12,7 @@
     "Other"
   ],
   "activationEvents": [],
-  "main": "./out/extension.js",
+  "main": "./dist/extension.js",
   "repository": {
     "type": "git",
     "url": "https://github.com/rgkirch/goto-char-timer.git"
@@ -51,7 +51,9 @@
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src",
-    "test": "vscode-test"
+    "test": "vscode-test",
+    "bundle": "node esbuild.js",
+    "publish": "vsce package && vsce publish"
   },
   "devDependencies": {
     "@types/glob": "^8.1.0",

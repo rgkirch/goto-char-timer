@@ -277,8 +277,9 @@ function gotoCharTimer() {
 						}),
 						rxops.last(),
 						rxops.switchMap(({ matchesMap }) => {
-							const totalMatches = Array.from(matchesMap.values()).reduce((acc, ranges) => acc + ranges.length, 0);
-							const labelLength = Math.ceil(Math.log(totalMatches) / Math.log(26));
+							const numMatches: number = Array.from(matchesMap.values()).reduce((acc, ranges) => acc + ranges.length, 0);
+							logDebug(`Number of matches: ${numMatches}`);
+							const labelLength: number = Math.ceil(Math.log(numMatches) / Math.log(LETTERS.length));
 							const labelGenerator: Generator<string> = uniqueLetterCombinations(labelLength);
 							const withLabels: [string, vscode.TextEditor, vscode.Range][] =
 								Array.from(matchesMap).flatMap(([editor, ranges]) => {

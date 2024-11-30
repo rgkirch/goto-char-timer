@@ -3,7 +3,7 @@ import * as assert from 'assert';
 // You can import and use all API from the 'vscode' module
 // as well as import your extension to test it
 import * as vscode from 'vscode';
-import { uniqueLetterCombinations } from '../extension';
+import { uniqueLetterCombinations, calculateLabelLength } from '../extension';
 // import * as myExtension from '../../extension';
 
 suite('Extension Test Suite', () => {
@@ -37,5 +37,13 @@ suite('Extension Test Suite', () => {
 		assert.strictEqual(combinations.length, 26 * 26 * 26);
 		assert.deepStrictEqual(combinations.slice(0, 3), ['aaa', 'baa', 'caa']);
 		assert.deepStrictEqual(combinations.slice(-3), ['xzz', 'yzz', 'zzz']);
+	});
+
+	test('calculateLabelLength should return correct label length', () => {
+		assert.strictEqual(calculateLabelLength(1), 1, 'Failed for 1 match');
+		assert.strictEqual(calculateLabelLength(26), 1, 'Failed for 26 matches');
+		assert.strictEqual(calculateLabelLength(27), 2, 'Failed for 27 matches');
+		assert.strictEqual(calculateLabelLength(26 * 26), 2, 'Failed for 26*26 matches');
+		assert.strictEqual(calculateLabelLength(26 * 26 + 1), 3, 'Failed for 26*26+1 matches');
 	});
 });

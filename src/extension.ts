@@ -232,6 +232,22 @@ function clearIncrementalRanges(editors: vscode.TextEditor[]) {
 }
 
 /**
+ * Calculates the length of the label based on the number of matches.
+ * 
+ * @param numMatches - The number of matches found.
+ * @returns The length of the label.
+ */
+export function calculateLabelLength(numMatches: number): number {
+	if (numMatches < 1) {
+		throw new Error('Number of matches cannot be negative');
+	} else if (numMatches === 1) {
+		return 1;
+	} else {
+		return Math.ceil(Math.log(numMatches) / Math.log(LETTERS.length));
+	}
+}
+
+/**
  * Activates the `gotoCharTimer` command which allows users to search for a string within the visible ranges of all open editors,
  * and then jump to a specific match by entering a label.
  *
@@ -279,7 +295,7 @@ function gotoCharTimer() {
 						rxops.switchMap(({ matchesMap }) => {
 							const numMatches: number = Array.from(matchesMap.values()).reduce((acc, ranges) => acc + ranges.length, 0);
 							logDebug(`Number of matches: ${numMatches}`);
-							const labelLength: number = Math.ceil(Math.log(numMatches) / Math.log(LETTERS.length));
+							const labelLength: number = calculateLabelLength(numMatches);
 							const labelGenerator: Generator<string> = uniqueLetterCombinations(labelLength);
 							const withLabels: [string, vscode.TextEditor, vscode.Range][] =
 								Array.from(matchesMap).flatMap(([editor, ranges]) => {

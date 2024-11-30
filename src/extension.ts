@@ -83,18 +83,19 @@ function findCandidates(
  *
  * @param matchText - The text to match within the editor.
  * @param editor - The text editor in which to search for matches.
- * @returns An observable that emits an array of vscode.Range objects representing the matched ranges.
+ * @returns An observable that emits a tuple containing the vscode.TextEditor and an array of vscode.Range objects representing the matched ranges.
  */
 function findAllCandidates(
 	matchText: string,
 	editor: vscode.TextEditor
-): rxjs.Observable<vscode.Range[]> {
+): rxjs.Observable<[vscode.TextEditor, vscode.Range[]]> {
 	return findCandidates(matchText, editor).pipe(
 		rxops.scan((acc, range) => {
 			acc.push(range);
 			return acc;
 		}, [] as vscode.Range[]),
-		rxops.defaultIfEmpty([]) // Return an empty array if no matches are found
+		rxops.defaultIfEmpty([]), // Return an empty array if no matches are found
+		rxops.map(ranges => [editor, ranges] as [vscode.TextEditor, vscode.Range[]])
 	);
 }
 
@@ -117,11 +118,9 @@ function findCandidatesForAllEditors(
 		.pipe(
 			rxops.mergeMap(editor =>
 				findAllCandidates(matchText, editor)
-					.pipe(
-						rxops.map(ranges => [editor, ranges] as [vscode.TextEditor, vscode.Range[]])
-					)
 			),
-			rxops.reduce((acc, [editor, ranges]) => acc.set(editor, ranges), new Map<vscode.TextEditor, vscode.Range[]>())
+			rxops.reduce((acc, [editor, ranges]) => acc.set(editor, ranges),
+				new Map<vscode.TextEditor, vscode.Range[]>())
 		);
 }
 

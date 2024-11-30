@@ -53,7 +53,7 @@ function findCandidates(
 	matchText: string,
 	editor: vscode.TextEditor,
 ): rxjs.Observable<vscode.Range> {
-	const regex = new RegExp(matchText, 'g');
+	const regex = new RegExp(matchText, 'gi');
 	return new rxjs.Observable<vscode.Range>(
 		subscriber => {
 			(async () => {
@@ -246,7 +246,7 @@ function clearIncrementalRanges(editors: vscode.TextEditor[]) {
  * The function uses RxJS operators to handle asynchronous operations and manage the observable streams.
  */
 function gotoCharTimer() {
-	logDebug(`Command ${commandId} activated`);
+	logDebug(`Command ${commandId} Activated`);
 	visibleRanges()
 		.pipe(
 			rxops.switchMap(visibleRanges => {

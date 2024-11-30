@@ -2,7 +2,7 @@
   "name": "goto-char-timer",
   "displayName": "GotoCharTimer",
   "description": "",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "rgkirch",
   "license": "MIT",
   "engines": {
@@ -83,8 +83,23 @@
     "typescript": "^5.6.3"
   },
   "dependencies": {
+    "circular-dependency-plugin": "^5.2.2",
+    "clean-webpack-plugin": "^4.0.0",
+    "event-stream": "^4.0.1",
+    "fork-ts-checker-webpack-plugin": "^9.0.2",
+    "gulp": "^5.0.0",
+    "gulp-bump": "^3.2.0",
+    "gulp-git": "^2.11.0",
+    "gulp-tag-version": "^1.3.1",
+    "gulp-typescript": "^6.0.0-alpha.1",
     "husky": "^9.1.7",
-    "rxjs": "^7.8.1"
+    "os-browserify": "^0.3.0",
+    "path-browserify": "^1.0.1",
+    "process": "^0.11.10",
+    "rxjs": "^7.8.1",
+    "webpack": "^5.96.1",
+    "webpack-merge": "^6.0.1",
+    "webpack-stream": "^7.0.0"
   },
   "lint-staged": {
     "*.{ts,js,json,md,yml}": "prettier --write",

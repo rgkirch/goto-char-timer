@@ -248,6 +248,17 @@ export function calculateLabelLength(numMatches: number): number {
 }
 
 /**
+ * Jumps the cursor to the specified position in the given editor.
+ * 
+ * @param editor - The text editor in which to jump.
+ * @param position - The position to jump to.
+ */
+function jumpToPosition(editor: vscode.TextEditor, position: vscode.Position) {
+	editor.revealRange(new vscode.Range(position, position));
+	editor.selection = new vscode.Selection(position, position);
+}
+
+/**
  * Activates the `gotoCharTimer` command which allows users to search for a string within the visible ranges of all open editors,
  * and then jump to a specific match by entering a label.
  *
@@ -295,6 +306,11 @@ function gotoCharTimer() {
 						rxops.switchMap(({ matchesMap }) => {
 							const numMatches: number = Array.from(matchesMap.values()).reduce((acc, ranges) => acc + ranges.length, 0);
 							logDebug(`Number of matches: ${numMatches}`);
+							if (numMatches === 1) {
+								const [editor, [range]] = matchesMap.entries().next().value!;
+								jumpToPosition(editor, range!.start);
+								return rxjs.EMPTY;
+							}
 							const labelLength: number = calculateLabelLength(numMatches);
 							const labelGenerator: Generator<string> = uniqueLetterCombinations(labelLength);
 							const withLabels: [string, vscode.TextEditor, vscode.Range][] =
@@ -319,8 +335,7 @@ function gotoCharTimer() {
 											const match = matches[0];
 											if (match) {
 												const [, editor, range] = match;
-												editor.revealRange(range);
-												editor.selection = new vscode.Selection(range.start, range.start);
+												jumpToPosition(editor, range.start);
 												disposeInputBox(); // Close the input box
 												return; // End the observable
 											}

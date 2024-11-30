@@ -9,7 +9,7 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout VSCodeVim
+      - name: Checkout GotoCharTimer
         uses: actions/checkout@v3
 
       - name: Set up Node.js

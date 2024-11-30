@@ -106,7 +106,7 @@ gulp.task('webpack', function () {
   return webpack_stream(
     {
       config: webpack_config,
-      entry: ['./extension.ts', './extensionWeb.ts'],
+      entry: ['./src/extension.ts'],
     },
     webpack,
   ).pipe(gulp.dest('out'));
@@ -116,7 +116,7 @@ gulp.task('webpack-dev', function () {
   return webpack_stream(
     {
       config: webpack_dev_config,
-      entry: ['./extension.ts'],
+      entry: ['./src/extension.ts'],
     },
     webpack,
   ).pipe(gulp.dest('out'));
@@ -129,62 +129,8 @@ gulp.task('commit-hash', function (done) {
   });
 });
 
-// test
-gulp.task('run-test', function (done) {
-  // the flag --grep takes js regex as a string and filters by test and test suite names
-  var knownOptions = {
-    string: 'grep',
-    default: { grep: '' },
-  };
-  var options = minimist(process.argv.slice(2), knownOptions);
-
-  var spawn = require('child_process').spawn;
-  const dockerTag = 'vscodevim';
-
-  console.log('Building container...');
-  var dockerBuildCmd = spawn(
-    'docker',
-    ['build', '-f', './build/Dockerfile', './build/', '-t', dockerTag],
-    {
-      cwd: process.cwd(),
-      stdio: 'inherit',
-    },
-  );
-
-  dockerBuildCmd.on('exit', function (exitCode) {
-    if (exitCode !== 0) {
-      return done(
-        new PluginError('test', {
-          message: 'Docker build failed.',
-        }),
-      );
-    }
-
-    const dockerRunArgs = [
-      'run',
-      '-it',
-      '--rm',
-      '--env',
-      `MOCHA_GREP=${options.grep}`,
-      '-v',
-      process.cwd() + ':/app',
-      dockerTag,
-    ];
-    console.log('Running tests inside container...');
-    var dockerRunCmd = spawn('docker', dockerRunArgs, {
-      cwd: process.cwd(),
-      stdio: 'inherit',
-    });
-
-    dockerRunCmd.on('exit', function (exitCode) {
-      done(exitCode);
-    });
-  });
-});
-
 gulp.task('build', gulp.series('webpack', 'commit-hash'));
 gulp.task('build-dev', gulp.series('webpack-dev', 'commit-hash'));
 gulp.task('prepare-test', gulp.parallel('tsc', copyPackageJson));
-gulp.task('test', gulp.series('prepare-test', 'run-test'));
 gulp.task('release', gulp.series(validateArgs, updateVersion, createGitCommit, createGitTag));
-gulp.task('default', gulp.series('build', 'test'));
+gulp.task('default', gulp.series('build'));

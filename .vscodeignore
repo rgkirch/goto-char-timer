@@ -1,15 +1,9 @@
-.gitignore
-.vscode-test/**
-.vscode/**
-.yarnrc
-**/.vscode-test.*
-**/*.map
-**/*.ts
-**/eslint.config.mjs
-**/tsconfig.json
-esbuild.js
-node_modules
-out/
-src/**
-vsc-extension-quickstart.md
-webpack.config.js
+# Ignore everything
+**
+
+# Include only the 'out' folder
+!out/**
+
+# Optionally include your README, CHANGELOG, or LICENSE files if needed
+!README.md
+!LICENSE

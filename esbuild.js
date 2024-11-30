@@ -9,7 +9,7 @@ async function main() {
     sourcemap: false,
     sourcesContent: false,
     platform: 'node',
-    outfile: 'dist/extension.js',
+    outfile: 'out/extension.js',
     external: ['vscode'],
     logLevel: 'silent',
   });

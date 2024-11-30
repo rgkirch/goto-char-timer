@@ -138,31 +138,6 @@ function textEditorVisibleRanges(): Map<vscode.TextEditor, readonly vscode.Range
 }
 
 /**
- * Creates an observable that emits a map of text editors to their visible ranges.
- * 
- * The observable listens for changes in the visible ranges of text editors and updates the map accordingly.
- * It also emits the initial state of the visible ranges when subscribed to.
- * 
- * @returns An observable that emits a map where the keys are `vscode.TextEditor` instances and the values are arrays of `vscode.Range` objects representing the visible ranges.
- */
-function visibleRanges(): rxjs.Observable<Map<vscode.TextEditor, readonly vscode.Range[]>> {
-	return rxjs.fromEventPattern<vscode.TextEditorVisibleRangesChangeEvent>(
-		handler => vscode.window.onDidChangeTextEditorVisibleRanges(handler),
-		(_handler, disposable) => disposable.dispose()
-	).pipe(
-		rxops.scan(
-			(acc, { textEditor, visibleRanges }) => {
-				logDebug(`Visible ranges changed for editor: ${textEditor.document.uri.toString()}`);
-				logDebug(`New visible ranges: ${JSON.stringify(visibleRanges)}`);
-				return acc.set(textEditor, visibleRanges);
-			},
-			textEditorVisibleRanges()
-		),
-		rxops.startWith(textEditorVisibleRanges())
-	);
-}
-
-/**
  * Displays an input box with a prompt and returns an observable that emits the input value.
  * The observable completes when the input box is accepted, hidden, or after a specified timeout.
  *
@@ -274,79 +249,82 @@ function jumpToPosition(editor: vscode.TextEditor, position: vscode.Position) {
  */
 function gotoCharTimer() {
 	logDebug(`Command ${commandId} Activated`);
-	visibleRanges()
+	const visibleRanges = textEditorVisibleRanges();
+	rxInputBox('Enter a string to search for', gotoTimerTimeout)
 		.pipe(
-			rxops.switchMap(visibleRanges => {
-				return rxInputBox('Enter a string to search for', gotoTimerTimeout)
+			rxops.tap({
+				complete: () => {
+					logDebug('Input box closed');
+					clearIncrementalRanges(Array.from(visibleRanges.keys()));
+				}
+			}),
+			rxops.switchMap(input => {
+				return findCandidatesForAllEditors(input.value, Array.from(visibleRanges.keys()))
+					.pipe(
+						rxops.map(matchesMap => ({ ...input, matchesMap }))
+					);
+			}),
+			rxops.tap(({ stopTimeout, matchesMap }) => {
+				if (Array.from(matchesMap.values()).every(ranges => ranges.length === 0)) {
+					logDebug('No matches found');
+					stopTimeout();
+					clearIncrementalRanges(Array.from(matchesMap.keys()));
+				} else {
+					matchesMap.forEach((ranges, editor) => {
+						editor.setDecorations(getIncrementalMatchDecoration(), ranges);
+					});
+				}
+			}),
+			rxops.last(),
+			rxops.switchMap(({ matchesMap }) => {
+				const numMatches: number = Array.from(matchesMap.values()).reduce((acc, ranges) => acc + ranges.length, 0);
+				logDebug(`Number of matches: ${numMatches}`);
+				if (numMatches === 1) {
+					const [editor, [range]] = matchesMap.entries().next().value!;
+					jumpToPosition(editor, range!.start);
+					return rxjs.EMPTY;
+				}
+				const labelLength: number = calculateLabelLength(numMatches);
+				const labelGenerator: Generator<string> = uniqueLetterCombinations(labelLength);
+				const withLabels: [string, vscode.TextEditor, vscode.Range][] =
+					Array.from(matchesMap).flatMap(([editor, ranges]) => {
+						return ranges.map(range => {
+							const label: string = labelGenerator.next().value;
+							editor.setDecorations(jumpLabelDecoration(label), [range]);
+							return [label, editor, range] as [string, vscode.TextEditor, vscode.Range];
+						});
+					});
+				return rxInputBox('Enter a label to jump to')
 					.pipe(
 						rxops.tap({
-							complete: () => {
-								logDebug('Input box closed');
-								clearIncrementalRanges(Array.from(visibleRanges.keys()));
+							complete() {
+								for (const [label, editor, _range] of withLabels) {
+									editor.setDecorations(jumpLabelDecoration(label), []);
+								}
 							}
 						}),
-						rxops.switchMap(input => {
-							return findCandidatesForAllEditors(input.value, Array.from(visibleRanges.keys()))
-								.pipe(
-									rxops.map(matchesMap => ({ ...input, matchesMap }))
-								);
-						}),
-						rxops.tap(({ stopTimeout, matchesMap }) => {
-							if (Array.from(matchesMap.values()).every(ranges => ranges.length === 0)) {
-								logDebug('No matches found');
-								stopTimeout();
-								clearIncrementalRanges(Array.from(matchesMap.keys()));
+						rxops.map(({ dispose: disposeInputBox, value: input }) => {
+							logDebug(`Label input: ${input}`);
+							for (const [label, editor, _range] of withLabels) {
+								editor.setDecorations(jumpLabelDecoration(label), []);
+							}
+							const matches: [string, vscode.TextEditor, vscode.Range][]
+								= withLabels.filter(([label, _editor, _range]) => label.startsWith(input));
+							logDebug(`Matches: ${JSON.stringify(matches.map(([label, _editor, _range]) => label))}`);
+							if (matches.length === 1) {
+								const match = matches[0];
+								if (match) {
+									const [, editor, range] = match;
+									jumpToPosition(editor, range.start);
+									disposeInputBox(); // Close the input box
+									return; // End the observable
+								}
 							} else {
-								matchesMap.forEach((ranges, editor) => {
-									editor.setDecorations(getIncrementalMatchDecoration(), ranges);
+								matches.forEach(([label, editor, range]) => {
+									editor.setDecorations(jumpLabelDecoration(label.slice(input.length)), [range]);
 								});
 							}
 						}),
-						rxops.last(),
-						rxops.switchMap(({ matchesMap }) => {
-							const numMatches: number = Array.from(matchesMap.values()).reduce((acc, ranges) => acc + ranges.length, 0);
-							logDebug(`Number of matches: ${numMatches}`);
-							if (numMatches === 1) {
-								const [editor, [range]] = matchesMap.entries().next().value!;
-								jumpToPosition(editor, range!.start);
-								return rxjs.EMPTY;
-							}
-							const labelLength: number = calculateLabelLength(numMatches);
-							const labelGenerator: Generator<string> = uniqueLetterCombinations(labelLength);
-							const withLabels: [string, vscode.TextEditor, vscode.Range][] =
-								Array.from(matchesMap).flatMap(([editor, ranges]) => {
-									return ranges.map(range => {
-										const label: string = labelGenerator.next().value;
-										editor.setDecorations(jumpLabelDecoration(label), [range]);
-										return [label, editor, range] as [string, vscode.TextEditor, vscode.Range];
-									});
-								});
-							return rxInputBox('Enter a label to jump to')
-								.pipe(
-									rxops.map(({ dispose: disposeInputBox, value: input }) => {
-										logDebug(`Label input: ${input}`);
-										for (const [label, editor, _range] of withLabels) {
-											editor.setDecorations(jumpLabelDecoration(label), []);
-										}
-										const matches: [string, vscode.TextEditor, vscode.Range][]
-											= withLabels.filter(([label, _editor, _range]) => label.startsWith(input));
-										logDebug(`Matches: ${JSON.stringify(matches.map(([label, _editor, _range]) => label))}`);
-										if (matches.length === 1) {
-											const match = matches[0];
-											if (match) {
-												const [, editor, range] = match;
-												jumpToPosition(editor, range.start);
-												disposeInputBox(); // Close the input box
-												return; // End the observable
-											}
-										} else {
-											matches.forEach(([label, editor, range]) => {
-												editor.setDecorations(jumpLabelDecoration(label.slice(input.length)), [range]);
-											});
-										}
-									}),
-								);
-						})
 					);
 			})
 		).subscribe();

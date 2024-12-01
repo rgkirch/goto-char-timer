@@ -3,7 +3,7 @@ import { ThemeColor } from 'vscode';
 import * as rxjs from 'rxjs';
 import * as rxops from 'rxjs/operators';
 
-const commandId = 'gotoCharTimer';
+const commandId = 'GotoCharTimer.gotoCharTimer';
 
 const gotoTimerTimeout = 800;
 

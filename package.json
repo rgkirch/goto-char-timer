@@ -20,13 +20,13 @@
   "contributes": {
     "commands": [
       {
-        "command": "gotoCharTimer",
+        "command": "GotoCharTimer.gotoCharTimer",
         "title": "goto char timer"
       }
     ],
     "keybindings": [
       {
-        "command": "gotoCharTimer",
+        "command": "GotoCharTimer.gotoCharTimer",
         "key": "alt+d"
       }
     ],

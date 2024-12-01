@@ -15,6 +15,8 @@ jobs:
     steps:
     - name: Checkout GotoCharTimer
       uses: actions/checkout@v3
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Setup Node.js
       uses: actions/setup-node@v3
@@ -30,7 +32,6 @@ jobs:
         git config --global user.email "bot@rgkirch.github.io"
         git config --global user.name "bot"
         npm version patch
-        git add package.json package-lock.json
         git push origin master
       
     - name: Publish to VSCode Marketplace

@@ -32,6 +32,7 @@ jobs:
         npm version patch
         git add package.json package-lock.json
         git commit -m "patch"
+        git push origin master --ff-only
       
     - name: Publish to VSCode Marketplace
       env:

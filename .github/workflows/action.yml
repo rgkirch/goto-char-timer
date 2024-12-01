@@ -30,14 +30,11 @@ jobs:
         git config --global user.email "bot@rgkirch.github.io"
         git config --global user.name "bot"
 
-    - name: Install VSCE
-      run: npm install -g @vscode/vsce
-
     - name: New Release
       run: npm version patch
 
     - name: Publish to VSCode Marketplace
       env:
         VSCODE_MARKETPLACE_TOKEN: ${{ secrets.VSCODE_MARKETPLACE_TOKEN }}
-      run: vsce publish -p $VSCODE_MARKETPLACE_TOKEN
+      run: npx vsce publish -p $VSCODE_MARKETPLACE_TOKEN
 

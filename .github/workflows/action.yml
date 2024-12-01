@@ -37,4 +37,7 @@ jobs:
       run: npm version patch
 
     - name: Publish to VSCode Marketplace
-      run: vsce publish -p ${{ secrets.VSCODE_MARKETPLACE_TOKEN }}
+      env:
+        VSCODE_MARKETPLACE_TOKEN: ${{ secrets.VSCODE_MARKETPLACE_TOKEN }}
+      run: vsce publish -p $VSCODE_MARKETPLACE_TOKEN
+

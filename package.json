@@ -20,14 +20,14 @@
   "contributes": {
     "commands": [
       {
-        "command": "goto-char-timer",
+        "command": "extension.goto-char-timer",
         "title": "goto char timer"
       }
     ],
     "keybindings": [
       {
-        "command": "goto-char-timer",
-        "mac": "cmd+h"
+        "command": "extension.goto-char-timer",
+        "key": "alt+d"
       }
     ],
     "configuration": {

@@ -25,14 +25,14 @@ jobs:
     - name: Install Dependencies
       run: npm install
 
-    - name: Configure Git
+    - name: New Release
       run: |
         git config --global user.email "bot@rgkirch.github.io"
         git config --global user.name "bot"
-
-    - name: New Release
-      run: npm version patch
-
+        npm version patch
+        git add package.json package-lock.json
+        git commit -m "patch"
+      
     - name: Publish to VSCode Marketplace
       env:
         VSCODE_MARKETPLACE_TOKEN: ${{ secrets.VSCODE_MARKETPLACE_TOKEN }}

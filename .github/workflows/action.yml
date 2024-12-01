@@ -30,6 +30,9 @@ jobs:
         git config --global user.email "bot@rgkirch.github.io"
         git config --global user.name "bot"
 
+    - name: Install VSCE
+      run: npm install -g @vscode/vsce
+
     - name: New Release
       run: npm version patch
 

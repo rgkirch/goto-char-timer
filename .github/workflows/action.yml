@@ -25,6 +25,11 @@ jobs:
     - name: Install Dependencies
       run: npm install
 
+    - name: Configure Git
+      run: |
+        git config --global user.email "bot@rgkirch.github.io"
+        git config --global user.name "bot"
+
     - name: New Release
       run: npm version patch
 

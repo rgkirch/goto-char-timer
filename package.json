@@ -2,7 +2,7 @@
   "name": "goto-char-timer",
   "displayName": "GotoCharTimer",
   "description": "what?",
-  "version": "0.0.22",
+  "version": "0.0.23",
   "publisher": "rgkirch",
   "license": "MIT",
   "engines": {

@@ -355,6 +355,7 @@ export function* uniqueLetterCombinations(length: number, letters: string = LETT
  * @param {vscode.ExtensionContext} context - The context in which the extension is activated, including subscriptions.
  */
 export function activate({ subscriptions }: vscode.ExtensionContext) {
+	vscode.window.showInformationMessage('GotoCharTimer extension activated');
 	logDebug(`Registering command ${commandId}`);
 	subscriptions.push(vscode.commands.registerCommand(commandId, () => gotoCharTimer()));
 }

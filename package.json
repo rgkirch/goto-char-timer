@@ -35,7 +35,7 @@
     "commands": [
       {
         "command": "GotoCharTimer.gotoCharTimer",
-        "title": "goto char timer"
+        "title": "Goto Char Timer"
       }
     ],
     "keybindings": [

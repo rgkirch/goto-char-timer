@@ -1,0 +1,2 @@
+- remove npx from action.yml. use VSCE_PAT from https://code.visualstudio.com/api/working-with-extensions/continuous-integration#automated-publishing
+- make it work with https://github.dev and https://vscode.dev/ https://code.visualstudio.com/docs/editor/vscode-web#_extensions

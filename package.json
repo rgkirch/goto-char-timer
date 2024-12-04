@@ -1,6 +1,6 @@
 {
   "name": "goto-char-timer",
-  "version": "0.0.25",
+  "version": "0.0.26",
   "publisher": "rgkirch",
   "engines": {
     "vscode": "^1.93.0"

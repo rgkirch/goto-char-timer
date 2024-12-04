@@ -1,18 +1,32 @@
 {
   "name": "goto-char-timer",
-  "displayName": "GotoCharTimer",
-  "description": "what?",
   "version": "0.0.25",
   "publisher": "rgkirch",
-  "license": "MIT",
   "engines": {
     "vscode": "^1.93.0"
   },
+  "license": "MIT",
+  "displayName": "GotoCharTimer",
+  "description": "gets you there without fuss",
   "categories": [
-    "Other"
+    "Other",
+    "Keymaps"
   ],
-  "activationEvents": [],
+  "keywords": [
+    "jump",
+    "acejump",
+    "avy",
+    "go",
+    "navigate"
+  ],
   "main": "./out/extension.js",
+  "dependencies": {
+    "rxjs": "^7.8.1"
+  },
+  "extensionKind": [
+    "ui"
+  ],
+  "pricing": "Free",
   "repository": {
     "type": "git",
     "url": "https://github.com/rgkirch/goto-char-timer.git"
@@ -45,6 +59,7 @@
       }
     }
   },
+  "activationEvents": [],
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
@@ -86,9 +101,6 @@
     "webpack-cli": "^5.1.4",
     "webpack-merge": "^6.0.1",
     "webpack-stream": "^7.0.0"
-  },
-  "dependencies": {
-    "rxjs": "^7.8.1"
   },
   "lint-staged": {
     "*.{ts,js,json,md,yml}": "prettier --write",

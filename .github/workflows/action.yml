@@ -14,28 +14,25 @@ jobs:
 
     steps:
     - name: Checkout GotoCharTimer
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Setup Node.js
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4
       with:
-        node-version: 18
+        node-version: 18.x
         cache: npm
 
     - name: Install Dependencies
       run: npm install
 
-    - name: New Release
-      run: |
-        git config --global user.email "bot@rgkirch.github.io"
-        git config --global user.name "bot"
-        npm version patch --no-git-tag-version
-        git push origin master
-      
     - name: Publish to VSCode Marketplace
       env:
         VSCODE_MARKETPLACE_TOKEN: ${{ secrets.VSCODE_MARKETPLACE_TOKEN }}
-      run: npx vsce publish -p $VSCODE_MARKETPLACE_TOKEN
+      run: |
+        git config --global user.email "bot@rgkirch.github.io"
+        git config --global user.name "bot"
+        npx vsce publish patch -p $VSCODE_MARKETPLACE_TOKEN
+        git push origin master
 

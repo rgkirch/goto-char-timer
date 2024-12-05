@@ -5,8 +5,6 @@ import * as rxops from 'rxjs/operators';
 
 const commandId = 'GotoCharTimer.gotoCharTimer';
 
-const gotoTimerTimeout = 800;
-
 const debug = true; // Set this to false to disable logging
 
 function logDebug(message: string) {
@@ -249,7 +247,9 @@ function jumpToPosition(editor: vscode.TextEditor, position: vscode.Position) {
 function gotoCharTimer() {
 	logDebug(`Command ${commandId} Activated`);
 	const visibleRanges = textEditorVisibleRanges();
-	rxInputBox('Enter a string to search for', gotoTimerTimeout)
+	const config = vscode.workspace.getConfiguration('gotoCharTimer');
+	const timeout = config.get<number>('timeout', 800); // Read timeout from configuration
+	rxInputBox('Enter a string to search for', timeout)
 		.pipe(
 			rxops.tap({
 				complete: () => {

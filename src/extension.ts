@@ -50,32 +50,33 @@ function getLetters(): string {
 }
 
 // find all occurrences of matchText in editor. return as observable of ranges.
-function findCandidates(
+async function findCandidates(
 	matchText: string,
 	editor: vscode.TextEditor,
-): rxjs.Observable<vscode.Range> {
+	abortSignal: AbortSignal,
+): Promise<vscode.Range[]> {
 	const regex = new RegExp(matchText, 'gi');
-	return new rxjs.Observable<vscode.Range>(
-		subscriber => {
-			(async () => {
-				for (const visibleRange of editor.visibleRanges) {
-					const text = editor.document.getText(visibleRange);
-					const visibleRangeOffset = editor.document.offsetAt(visibleRange.start);
-					const matches = text.matchAll(regex);
-					for (const match of matches) {
-						if (subscriber.closed) { return; }
-						const matchOffset: number = visibleRangeOffset + match.index;
-						const range = new vscode.Range(
-							editor.document.positionAt(matchOffset),
-							editor.document.positionAt(matchOffset + match[0].length));
-						subscriber.next(range);
-						await new Promise(resolve => setTimeout(resolve, 0)); // Yield to the event loop
-					}
-				}
-				subscriber.complete();
-			})();
+	const ranges: vscode.Range[] = [];
+	for (const visibleRange of editor.visibleRanges) {
+		if (abortSignal.aborted) {
+			break;
 		}
-	);
+		const text = editor.document.getText(visibleRange);
+		const visibleRangeOffset = editor.document.offsetAt(visibleRange.start);
+		const matches = text.matchAll(regex);
+		for (const match of matches) {
+			if (abortSignal.aborted) {
+				break;
+			}
+			const matchOffset: number = visibleRangeOffset + match.index!;
+			const range = new vscode.Range(
+				editor.document.positionAt(matchOffset),
+				editor.document.positionAt(matchOffset + match[0].length));
+			ranges.push(range);
+			await new Promise(resolve => setTimeout(resolve, 0)); // Yield to the event loop
+		}
+	}
+	return ranges;
 }
 
 
@@ -84,20 +85,16 @@ function findCandidates(
  *
  * @param matchText - The text to match within the editor.
  * @param editor - The text editor in which to search for matches.
- * @returns An observable that emits a tuple containing the vscode.TextEditor and an array of vscode.Range objects representing the matched ranges.
+ * @param abortSignal - The signal to abort the operation.
+ * @returns A promise that resolves to a tuple containing the vscode.TextEditor and an array of vscode.Range objects representing the matched ranges.
  */
-function findAllCandidates(
+async function findAllCandidates(
 	matchText: string,
-	editor: vscode.TextEditor
-): rxjs.Observable<[vscode.TextEditor, vscode.Range[]]> {
-	return findCandidates(matchText, editor).pipe(
-		rxops.scan((acc, range) => {
-			acc.push(range);
-			return acc;
-		}, [] as vscode.Range[]),
-		rxops.defaultIfEmpty([]), // Return an empty array if no matches are found
-		rxops.map(ranges => [editor, ranges] as [vscode.TextEditor, vscode.Range[]])
-	);
+	editor: vscode.TextEditor,
+	abortSignal: AbortSignal
+): Promise<[vscode.TextEditor, vscode.Range[]]> {
+	const ranges = await findCandidates(matchText, editor, abortSignal);
+	return [editor, ranges];
 }
 
 /**
@@ -105,24 +102,23 @@ function findAllCandidates(
  *
  * @param matchText - The text to match within the editors.
  * @param editors - A readonly array of vscode.TextEditor instances to search within.
- * @returns An Observable that emits a Map where each key is a vscode.TextEditor and each value is an array of vscode.Range objects representing the matched text ranges.
+ * @returns A promise that resolves to a Map where each key is a vscode.TextEditor and each value is an array of vscode.Range objects representing the matched text ranges.
  */
-function findCandidatesForAllEditors(
+async function findCandidatesForAllEditors(
 	matchText: string,
 	editors: readonly vscode.TextEditor[],
-): rxjs.Observable<Map<vscode.TextEditor, vscode.Range[]>> {
+): Promise<Map<vscode.TextEditor, vscode.Range[]>> {
 	if (!matchText) {
 		logDebug('Match text is empty, clearing decorations');
-		return rxjs.of(new Map(editors.map(editor => [editor, []] as [vscode.TextEditor, vscode.Range[]])));
+		return new Map(editors.map(editor => [editor, []] as [vscode.TextEditor, vscode.Range[]]));
 	}
-	return rxjs.from(editors)
-		.pipe(
-			rxops.mergeMap(editor =>
-				findAllCandidates(matchText, editor)
-			),
-			rxops.reduce((acc, [editor, ranges]) => acc.set(editor, ranges),
-				new Map<vscode.TextEditor, vscode.Range[]>())
-		);
+	const matchesMap = new Map<vscode.TextEditor, vscode.Range[]>();
+	const abortController = new AbortController();
+	for (const editor of editors) {
+		const [editorKey, ranges] = await findAllCandidates(matchText, editor, abortController.signal);
+		matchesMap.set(editorKey, ranges);
+	}
+	return matchesMap;
 }
 
 /**
@@ -253,6 +249,7 @@ function gotoCharTimer() {
 	const visibleRanges = textEditorVisibleRanges();
 	const config = vscode.workspace.getConfiguration('gotoCharTimer');
 	const timeout = config.get<number>('timeout', 800); // Read timeout from configuration
+	const abortController = new AbortController();
 	rxInputBox('Enter a string to search for', timeout)
 		.pipe(
 			rxops.tap({
@@ -261,17 +258,15 @@ function gotoCharTimer() {
 					clearIncrementalRanges(Array.from(visibleRanges.keys()));
 				}
 			}),
-			rxops.switchMap(input => {
-				return findCandidatesForAllEditors(input.value, Array.from(visibleRanges.keys()))
-					.pipe(
-						rxops.map(matchesMap => ({ ...input, matchesMap }))
-					);
-			}),
+			rxops.switchMap(input => rxjs.from(findCandidatesForAllEditors(input.value, Array.from(visibleRanges.keys())))
+				.pipe(rxops.map(matchesMap => ({ ...input, matchesMap })))
+			),
 			rxops.tap(({ stopTimeout, matchesMap }) => {
 				if (Array.from(matchesMap.values()).every(ranges => ranges.length === 0)) {
 					logDebug('No matches found');
 					stopTimeout();
 					clearIncrementalRanges(Array.from(matchesMap.keys()));
+					abortController.abort();
 				} else {
 					matchesMap.forEach((ranges, editor) => {
 						editor.setDecorations(getIncrementalMatchDecoration(), ranges);
@@ -291,12 +286,12 @@ function gotoCharTimer() {
 				const labelGenerator: Generator<string> = uniqueLetterCombinations(labelLength);
 				const withLabels: [string, vscode.TextEditor, vscode.Range][] =
 					Array.from(matchesMap).flatMap(([editor, ranges]) => {
-						return ranges.map(range => {
+					return ranges.map(range => {
 							const label: string = labelGenerator.next().value;
-							editor.setDecorations(jumpLabelDecoration(label), [range]);
-							return [label, editor, range] as [string, vscode.TextEditor, vscode.Range];
-						});
+						editor.setDecorations(jumpLabelDecoration(label), [range]);
+						return [label, editor, range] as [string, vscode.TextEditor, vscode.Range];
 					});
+				});
 				return rxInputBox('Enter a label to jump to')
 					.pipe(
 						rxops.tap({ complete: () => withLabels.forEach(([label, editor, _range]) => editor.setDecorations(jumpLabelDecoration(label), [])) }),

@@ -44,7 +44,10 @@ const jumpLabelDecoration = memoize((contentText: string) => {
 	});
 });
 
-const LETTERS = 'abcdefghijklmnopqrstuvwxyz';
+function getLetters(): string {
+	const config = vscode.workspace.getConfiguration('gotoCharTimer');
+	return config.get<string>('charset', 'abcdefghijklmnopqrstuvwxyz');
+}
 
 // find all occurrences of matchText in editor. return as observable of ranges.
 function findCandidates(
@@ -210,12 +213,13 @@ function clearIncrementalRanges(editors: vscode.TextEditor[]) {
  * @returns The length of the label.
  */
 export function calculateLabelLength(numMatches: number): number {
+	const letters = getLetters();
 	if (numMatches < 1) {
 		throw new Error('Number of matches cannot be negative');
 	} else if (numMatches === 1) {
 		return 1;
 	} else {
-		return Math.ceil(Math.log(numMatches) / Math.log(LETTERS.length));
+		return Math.ceil(Math.log(numMatches) / Math.log(letters.length));
 	}
 }
 
@@ -336,7 +340,7 @@ function gotoCharTimer() {
  * @param letters - The set of letters to use for generating combinations.
  * @returns A generator that yields letter combinations.
  */
-export function* uniqueLetterCombinations(length: number, letters: string = LETTERS): Generator<string> {
+export function* uniqueLetterCombinations(length: number, letters: string = getLetters()): Generator<string> {
 	const generate = function* (suffix: string, length: number): Generator<string> {
 		if (length === 0) {
 			yield suffix;

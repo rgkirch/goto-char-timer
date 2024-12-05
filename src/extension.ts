@@ -299,13 +299,7 @@ function gotoCharTimer() {
 					});
 				return rxInputBox('Enter a label to jump to')
 					.pipe(
-						rxops.tap({
-							complete() {
-								for (const [label, editor, _range] of withLabels) {
-									editor.setDecorations(jumpLabelDecoration(label), []);
-								}
-							}
-						}),
+						rxops.tap({ complete: () => withLabels.forEach(([label, editor, _range]) => editor.setDecorations(jumpLabelDecoration(label), [])) }),
 						rxops.map(({ dispose: disposeInputBox, value: input }) => {
 							logDebug(`Label input: ${input}`);
 							for (const [label, editor, _range] of withLabels) {

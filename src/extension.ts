@@ -255,23 +255,24 @@ function gotoCharTimer() {
 						rxops.scan((acc, input) => ({ previous: acc.current, current: input }), { previous: '', current: '' }),
 						rxops.map(({ previous, current }) => {
 							logDebug(`Label input: ${current}`);
-							const matches: [string, vscode.TextEditor, vscode.Range][] = withLabels.filter(([label, _editor, _range]) => label.startsWith(current));
-							logDebug(`Matches: ${JSON.stringify(matches.map(([label, _editor, _range]) => label))}`);
-							matches.forEach(([label, editor]) => {
+							const candidates: [string, vscode.TextEditor, vscode.Range][] = withLabels.filter(([label, _editor, _range]) => label.startsWith(current));
+							logDebug(`Matches: ${JSON.stringify(candidates.map(([label, _editor, _range]) => label))}`);
+							candidates.forEach(([label, editor]) => {
 								editor.setDecorations(jumpLabelDecoration(label.slice(previous.length)), []);
 							});
-							if (matches.length === 1) {
-								const match = matches[0];
-								if (match) {
-									const [, editor, range] = match;
-									jumpToPosition(editor, range.start);
-									labelInputAbortController.abort();
-									return; // End the observable
-								}
-							} else {
-								matches.forEach(([label, editor, range]) => {
-									editor.setDecorations(jumpLabelDecoration(label.slice(current.length)), [range]);
-								});
+							candidates.forEach(([label, editor, range]) => {
+								editor.setDecorations(jumpLabelDecoration(label.slice(current.length)), [range]);
+							});
+							return { candidates, current };
+						}),
+						rxops.filter(({ candidates }) => candidates.length === 1),
+						rxops.first(),
+						rxops.tap(({ candidates }) => {
+							const match = candidates[0];
+							if (match) {
+								const [, editor, range] = match;
+								jumpToPosition(editor, range.start);
+								labelInputAbortController.abort();
 							}
 						}),
 					);
@@ -356,5 +357,7 @@ class TimeoutControllerImpl implements TimeoutController, OnTimeout {
 function createTimeoutController(timeout: number): TimeoutControllerImpl {
 	return new TimeoutControllerImpl(timeout);
 }
+
+
 
 

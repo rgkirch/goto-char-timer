@@ -249,24 +249,27 @@ function gotoCharTimer() {
 						});
 					});
 				const labelInputAbortController = new AbortController();
+				var matchDecorations: [vscode.TextEditor, vscode.TextEditorDecorationType][] = [];
 				return rxInputBox('Enter a label to jump to', labelInputAbortController.signal)
 					.pipe(
-						rxops.scan((acc, input) => ({ previous: acc.current, current: input }), { previous: '', current: '' }),
-						rxops.map(({ previous, current }) => {
-							logDebug(`Label input: ${current}`);
-							const candidates: [string, vscode.TextEditor, vscode.Range][] = withLabels.filter(([label, _editor, _range]) => label.startsWith(current));
-							logDebug(`Matches: ${JSON.stringify(candidates.map(([label, _editor, _range]) => label))}`);
-							candidates.forEach(([label, editor]) => {
-								editor.setDecorations(jumpLabelDecoration(label.slice(previous.length)), []);
+						rxops.map(input =>
+							withLabels
+								.filter(([label]) => label.startsWith(input))
+								.map(([label, editor, range]) => [label.slice(input.length), editor, range] as [string, vscode.TextEditor, vscode.Range])),
+						rxops.tap((matches) => {
+							matchDecorations.forEach(([editor, decoration]) => {
+								editor.setDecorations(decoration, []);
 							});
-							candidates.forEach(([label, editor, range]) => {
-								editor.setDecorations(jumpLabelDecoration(label.slice(current.length)), [range]);
+							matchDecorations = [];
+							matches.forEach(([label, editor, range]) => {
+								const decoration = jumpLabelDecoration(label);
+								editor.setDecorations(decoration, [range]);
+								matchDecorations.push([editor, decoration]);
 							});
-							return { candidates, current };
 						}),
-						rxops.filter(({ candidates }) => candidates.length === 1),
+						rxops.filter((candidates) => candidates.length === 1),
 						rxops.first(),
-						rxops.tap(({ candidates }) => {
+						rxops.tap((candidates) => {
 							const match = candidates[0];
 							if (match) {
 								const [, editor, range] = match;

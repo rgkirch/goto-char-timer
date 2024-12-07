@@ -161,17 +161,6 @@ function rxInputBox(prompt: string, abortSignal: AbortSignal): rxjs.Observable<s
 }
 
 /**
- * Clears the incremental match decorations for the given array of text editors.
- *
- * @param editors - An array of `vscode.TextEditor` instances for which the incremental match decorations should be cleared.
- */
-function clearIncrementalRanges(editors: vscode.TextEditor[]) {
-	editors.forEach(editor => {
-		editor.setDecorations(getIncrementalMatchDecoration(), []);
-	});
-}
-
-/**
  * Calculates the length of the label based on the number of matches.
  * 
  * @param numMatches - The number of matches found.

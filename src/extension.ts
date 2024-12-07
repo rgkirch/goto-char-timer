@@ -257,6 +257,10 @@ function gotoCharTimer() {
 								.filter(([label]) => label.startsWith(input))
 								.map(([label, editor, range]) => [label.slice(input.length), editor, range] as [string, vscode.TextEditor, vscode.Range])),
 						rxops.tap((matches) => {
+							logDebug(`Clearing old decorations: ${JSON.stringify(matchDecorations.map(([editor, decoration]) => ({
+								editor: editor.document.fileName,
+								decoration: decoration
+							})))}`);
 							matchDecorations.forEach(([editor, decoration]) => {
 								editor.setDecorations(decoration, []);
 							});
@@ -270,6 +274,14 @@ function gotoCharTimer() {
 						rxops.filter((candidates) => candidates.length === 1),
 						rxops.first(),
 						rxops.tap((candidates) => {
+							logDebug(`Clearing decorations and jumping: ${JSON.stringify(matchDecorations.map(([editor, decoration]) => ({
+								editor: editor.document.fileName,
+								decoration: decoration
+							})))}`);
+							matchDecorations.forEach(([editor, decoration]) => {
+								editor.setDecorations(decoration, []);
+							});
+							matchDecorations = [];
 							const match = candidates[0];
 							if (match) {
 								const [, editor, range] = match;

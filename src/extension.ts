@@ -251,7 +251,6 @@ function gotoCharTimer() {
 				const labelInputAbortController = new AbortController();
 				return rxInputBox('Enter a label to jump to', labelInputAbortController.signal)
 					.pipe(
-						rxops.tap({ complete: () => withLabels.forEach(([label, editor, _range]) => editor.setDecorations(jumpLabelDecoration(label), [])) }),
 						rxops.scan((acc, input) => ({ previous: acc.current, current: input }), { previous: '', current: '' }),
 						rxops.map(({ previous, current }) => {
 							logDebug(`Label input: ${current}`);

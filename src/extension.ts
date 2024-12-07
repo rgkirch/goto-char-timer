@@ -73,7 +73,7 @@ async function findCandidates(
 				editor.document.positionAt(matchOffset),
 				editor.document.positionAt(matchOffset + match[0].length));
 			ranges.push(range);
-			await new Promise(resolve => setTimeout(resolve, 0)); // Yield to the event loop
+			// await new Promise(resolve => setTimeout(resolve, 0)); // Yield to the event loop
 		}
 	}
 	return ranges;
@@ -138,56 +138,25 @@ function textEditorVisibleRanges(): Map<vscode.TextEditor, readonly vscode.Range
  * The observable completes when the input box is accepted, hidden, or after a specified timeout.
  *
  * @param prompt - The prompt message to display in the input box.
- * @param timeout - The timeout duration in milliseconds. Defaults to 800 ms.
+ * @param abortSignal - The signal to abort the operation.
  * @returns An observable that emits an object containing:
- *   - `stopTimeout`: A function to stop the timeout.
  *   - `dispose`: A function to dispose of the input box.
  *   - `value`: The current value of the input box.
  */
-function rxInputBox(prompt: string, timeout: number = 800): rxjs.Observable<{ stopTimeout: () => void, dispose: () => void, value: string }> {
+function rxInputBox(prompt: string, abortSignal: AbortSignal): rxjs.Observable<string> {
 	const inputBox = vscode.window.createInputBox();
 	inputBox.prompt = prompt;
 	inputBox.value = '';
 	inputBox.show();
-	return new rxjs.Observable<{ stopTimeout: () => void, dispose: () => void, value: string }>(observer => {
-		let timeoutHandle: NodeJS.Timeout | null = null;
-
-		const startTimeout = () => {
-			if (timeoutHandle) {
-				clearTimeout(timeoutHandle);
-			}
-			timeoutHandle = setTimeout(() => {
-				observer.complete();
-				inputBox.dispose();
-			}, timeout);
-		};
-
-		const stopTimeout = () => {
-			if (timeoutHandle) {
-				clearTimeout(timeoutHandle);
-				timeoutHandle = null;
-			}
-		};
-
-		const dispose = () => {
-			stopTimeout();
-			inputBox.dispose();
-		};
-
-		inputBox.onDidChangeValue(value => {
-			startTimeout();
-			observer.next({ stopTimeout, dispose, value });
-		});
-		inputBox.onDidAccept(() => {
-			stopTimeout();
+	return new rxjs.Observable<string>(observer => {
+		const finalizeInput = () => {
 			observer.complete();
 			inputBox.dispose();
-		});
-		inputBox.onDidHide(() => {
-			stopTimeout();
-			observer.complete();
-			inputBox.dispose();
-		});
+		};
+		inputBox.onDidChangeValue(value => observer.next(value));
+		inputBox.onDidAccept(() => finalizeInput());
+		inputBox.onDidHide(() => finalizeInput());
+		abortSignal.onabort = () => finalizeInput();
 	});
 }
 
@@ -249,32 +218,30 @@ function gotoCharTimer() {
 	const visibleRanges = textEditorVisibleRanges();
 	const config = vscode.workspace.getConfiguration('gotoCharTimer');
 	const timeout = config.get<number>('timeout', 800); // Read timeout from configuration
-	const abortController = new AbortController();
-	rxInputBox('Enter a string to search for', timeout)
+	const incrementalSearchTimeoutController = createTimeoutController(timeout);
+	rxInputBox('Enter a string to search for', incrementalSearchTimeoutController.signal)
 		.pipe(
-			rxops.tap({
-				complete: () => {
-					logDebug('Input box closed');
-					clearIncrementalRanges(Array.from(visibleRanges.keys()));
-				}
-			}),
-			rxops.switchMap(input => rxjs.from(findCandidatesForAllEditors(input.value, Array.from(visibleRanges.keys())))
-				.pipe(rxops.map(matchesMap => ({ ...input, matchesMap })))
-			),
-			rxops.tap(({ stopTimeout, matchesMap }) => {
-				if (Array.from(matchesMap.values()).every(ranges => ranges.length === 0)) {
-					logDebug('No matches found');
-					stopTimeout();
-					clearIncrementalRanges(Array.from(matchesMap.keys()));
-					abortController.abort();
-				} else {
-					matchesMap.forEach((ranges, editor) => {
-						editor.setDecorations(getIncrementalMatchDecoration(), ranges);
-					});
+			rxops.switchMap(input => rxjs.from(findCandidatesForAllEditors(input, Array.from(visibleRanges.keys())))),
+			rxops.tap(matchesMap => {
+				incrementalSearchTimeoutController.stopTimeout();
+				var hasAnyMatches = false;
+				matchesMap.forEach((ranges, editor) => {
+					editor.setDecorations(getIncrementalMatchDecoration(), ranges);
+					hasAnyMatches = true;
+				});
+				if (hasAnyMatches) {
+					incrementalSearchTimeoutController.startTimeout();
 				}
 			}),
 			rxops.last(),
-			rxops.switchMap(({ matchesMap }) => {
+			rxops.tap(matchesMap => {
+				logDebug('Input box closed');
+				matchesMap.forEach((_, editor) => {
+					editor.setDecorations(getIncrementalMatchDecoration(), []);
+				});
+
+			}),
+			rxops.switchMap(matchesMap => {
 				const numMatches: number = Array.from(matchesMap.values()).reduce((acc, ranges) => acc + ranges.length, 0);
 				logDebug(`Number of matches: ${numMatches}`);
 				if (numMatches === 1) {
@@ -286,34 +253,35 @@ function gotoCharTimer() {
 				const labelGenerator: Generator<string> = uniqueLetterCombinations(labelLength);
 				const withLabels: [string, vscode.TextEditor, vscode.Range][] =
 					Array.from(matchesMap).flatMap(([editor, ranges]) => {
-					return ranges.map(range => {
+						return ranges.map(range => {
 							const label: string = labelGenerator.next().value;
-						editor.setDecorations(jumpLabelDecoration(label), [range]);
-						return [label, editor, range] as [string, vscode.TextEditor, vscode.Range];
+							editor.setDecorations(jumpLabelDecoration(label), [range]);
+							return [label, editor, range] as [string, vscode.TextEditor, vscode.Range];
+						});
 					});
-				});
-				return rxInputBox('Enter a label to jump to')
+				const labelInputAbortController = new AbortController();
+				return rxInputBox('Enter a label to jump to', labelInputAbortController.signal)
 					.pipe(
 						rxops.tap({ complete: () => withLabels.forEach(([label, editor, _range]) => editor.setDecorations(jumpLabelDecoration(label), [])) }),
-						rxops.map(({ dispose: disposeInputBox, value: input }) => {
-							logDebug(`Label input: ${input}`);
-							for (const [label, editor, _range] of withLabels) {
-								editor.setDecorations(jumpLabelDecoration(label), []);
-							}
-							const matches: [string, vscode.TextEditor, vscode.Range][]
-								= withLabels.filter(([label, _editor, _range]) => label.startsWith(input));
+						rxops.scan((acc, input) => ({ previous: acc.current, current: input }), { previous: '', current: '' }),
+						rxops.map(({ previous, current }) => {
+							logDebug(`Label input: ${current}`);
+							const matches: [string, vscode.TextEditor, vscode.Range][] = withLabels.filter(([label, _editor, _range]) => label.startsWith(current));
 							logDebug(`Matches: ${JSON.stringify(matches.map(([label, _editor, _range]) => label))}`);
+							matches.forEach(([label, editor]) => {
+								editor.setDecorations(jumpLabelDecoration(label.slice(previous.length)), []);
+							});
 							if (matches.length === 1) {
 								const match = matches[0];
 								if (match) {
 									const [, editor, range] = match;
 									jumpToPosition(editor, range.start);
-									disposeInputBox(); // Close the input box
+									labelInputAbortController.abort();
 									return; // End the observable
 								}
 							} else {
 								matches.forEach(([label, editor, range]) => {
-									editor.setDecorations(jumpLabelDecoration(label.slice(input.length)), [range]);
+									editor.setDecorations(jumpLabelDecoration(label.slice(current.length)), [range]);
 								});
 							}
 						}),
@@ -355,4 +323,49 @@ export function activate({ subscriptions }: vscode.ExtensionContext) {
 
 // This method is called when your extension is deactivated
 export function deactivate() { }
+
+interface TimeoutController {
+	startTimeout: () => void;
+	stopTimeout: () => void;
+}
+
+interface OnTimeout {
+	onTimeout: (callback: () => void) => void;
+}
+
+class TimeoutControllerImpl implements TimeoutController, OnTimeout {
+	private timeoutHandle: NodeJS.Timeout | null = null;
+	private abortController = new AbortController();
+
+	constructor(private timeout: number) { }
+
+	startTimeout() {
+		if (this.timeoutHandle) {
+			clearTimeout(this.timeoutHandle);
+		}
+		this.timeoutHandle = setTimeout(() => {
+			this.abortController.abort();
+		}, this.timeout);
+	}
+
+	stopTimeout() {
+		if (this.timeoutHandle) {
+			clearTimeout(this.timeoutHandle);
+			this.timeoutHandle = null;
+		}
+	}
+
+	onTimeout(callback: () => void) {
+		this.abortController.signal.onabort = callback;
+	}
+
+	get signal(): AbortSignal {
+		return this.abortController.signal;
+	}
+}
+
+function createTimeoutController(timeout: number): TimeoutControllerImpl {
+	return new TimeoutControllerImpl(timeout);
+}
+
 

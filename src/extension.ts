@@ -241,43 +241,37 @@ function gotoCharTimer() {
 				const labelLength: number = calculateLabelLength(numMatches);
 				const labelGenerator: Generator<string> = uniqueLetterCombinations(labelLength);
 				const withLabels: [string, vscode.TextEditor, vscode.Range][] =
-					Array.from(matchesMap).flatMap(([editor, ranges]) => {
-						return ranges.map(range => {
-							const label: string = labelGenerator.next().value;
-							editor.setDecorations(jumpLabelDecoration(label), [range]);
-							return [label, editor, range] as [string, vscode.TextEditor, vscode.Range];
-						});
-					});
+					Array.from(matchesMap)
+						.flatMap(([editor, ranges]) =>
+							ranges.map(range =>
+								[(labelGenerator.next().value), editor, range] as [string, vscode.TextEditor, vscode.Range]));
 				const labelInputAbortController = new AbortController();
 				var matchDecorations: [vscode.TextEditor, vscode.TextEditorDecorationType][] = [];
 				return rxInputBox('Enter a label to jump to', labelInputAbortController.signal)
 					.pipe(
-						rxops.map(input =>
-							withLabels
-								.filter(([label]) => label.startsWith(input))
-								.map(([label, editor, range]) => [label.slice(input.length), editor, range] as [string, vscode.TextEditor, vscode.Range])),
-						rxops.tap((matches) => {
-							logDebug(`Clearing old decorations: ${JSON.stringify(matchDecorations.map(([editor, decoration]) => ({
-								editor: editor.document.fileName,
-								decoration: decoration
-							})))}`);
+						rxops.startWith(''),
+						rxops.tap(() => {
 							matchDecorations.forEach(([editor, decoration]) => {
 								editor.setDecorations(decoration, []);
 							});
 							matchDecorations = [];
-							matches.forEach(([label, editor, range]) => {
+						}),
+						rxops.map(input => withLabels
+							.filter(([label]) => label.startsWith(input))
+							.map(([label, editor, range]) => [label.slice(input.length), editor, range] as [string, vscode.TextEditor, vscode.Range])
+						),
+						rxops.tap(candidates => {
+							candidates.forEach(([label, editor, range]) => {
 								const decoration = jumpLabelDecoration(label);
 								editor.setDecorations(decoration, [range]);
 								matchDecorations.push([editor, decoration]);
 							});
 						}),
-						rxops.filter((candidates) => candidates.length === 1),
+						rxops.filter((candidates) => {
+							return candidates.length === 1;
+						}),
 						rxops.first(),
 						rxops.tap((candidates) => {
-							logDebug(`Clearing decorations and jumping: ${JSON.stringify(matchDecorations.map(([editor, decoration]) => ({
-								editor: editor.document.fileName,
-								decoration: decoration
-							})))}`);
 							matchDecorations.forEach(([editor, decoration]) => {
 								editor.setDecorations(decoration, []);
 							});

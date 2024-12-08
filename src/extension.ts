@@ -37,25 +37,25 @@ async function findCandidates(
 ): Promise<vscode.Range[]> {
 	const regex = new RegExp(matchText, 'gi');
 	const ranges: vscode.Range[] = [];
-	for (const visibleRange of editor.visibleRanges) {
+	const promises = editor.visibleRanges.map(async (visibleRange) => {
 		if (abortSignal.aborted) {
-			break;
+			return;
 		}
 		const text = editor.document.getText(visibleRange);
 		const visibleRangeOffset = editor.document.offsetAt(visibleRange.start);
 		const matches = text.matchAll(regex);
 		for (const match of matches) {
 			if (abortSignal.aborted) {
-				break;
+				return;
 			}
 			const matchOffset: number = visibleRangeOffset + match.index!;
 			const range = new vscode.Range(
 				editor.document.positionAt(matchOffset),
 				editor.document.positionAt(matchOffset + match[0].length));
 			ranges.push(range);
-			// await new Promise(resolve => setTimeout(resolve, 0)); // Yield to the event loop
 		}
-	}
+	});
+	await Promise.all(promises);
 	return ranges;
 }
 
@@ -130,7 +130,7 @@ function rxInputBox(prompt: string, abortSignal: AbortSignal): rxjs.Observable<s
 export function calculateLabelLength(numMatches: number): number {
 	const letters = getLetters();
 	if (numMatches < 1) {
-		throw new Error('Number of matches cannot be negative');
+		throw new Error('Number of matches must be at least 1');
 	} else if (numMatches === 1) {
 		return 1;
 	} else {
@@ -207,17 +207,22 @@ function gotoCharTimer() {
 				var matchDecorations: [vscode.TextEditor, vscode.TextEditorDecorationType][] = [];
 				return rxInputBox('Enter a label to jump to', labelInputAbortController.signal)
 					.pipe(
+						// This pipeline adds the jump label decorations and we give it an initial value for it to do that the first time.
 						rxops.startWith(''),
+						// Clear the decorations from the previous input. Not needed for the first time.
 						rxops.tap(() => {
 							matchDecorations.forEach(([editor, decoration]) => {
 								editor.setDecorations(decoration, []);
 							});
 							matchDecorations = [];
 						}),
-						rxops.map(input => withLabels
-							.filter(([label]) => label.startsWith(input))
-							.map(([label, editor, range]) => [label.slice(input.length), editor, range] as [string, vscode.TextEditor, vscode.Range])
+						// `withLabels` never changes which allows backspacing the input to work. For each input we filter to keep the labels that start with the input and trim them to size.
+						rxops.map(input =>
+							withLabels
+								.filter(([label]) => label.startsWith(input))
+								.map(([label, editor, range]) => [label.slice(input.length), editor, range] as [string, vscode.TextEditor, vscode.Range])
 						),
+						// Add the decorations and record them in `matchDecorations` for later removal.
 						rxops.tap(candidates => {
 							candidates.forEach(([label, editor, range]) => {
 								const decoration = jumpLabelDecoration(label);
@@ -225,10 +230,13 @@ function gotoCharTimer() {
 								matchDecorations.push([editor, decoration]);
 							});
 						}),
+						// If there is only one candidate then we can end this and jump to it.
 						rxops.filter((candidates) => {
 							return candidates.length === 1;
 						}),
+						// End the observable.
 						rxops.first(),
+						// Clear the decorations and jump to the position.
 						rxops.tap((candidates) => {
 							matchDecorations.forEach(([editor, decoration]) => {
 								editor.setDecorations(decoration, []);
@@ -238,6 +246,7 @@ function gotoCharTimer() {
 							if (match) {
 								const [, editor, range] = match;
 								jumpToPosition(editor, range.start);
+								// This kills the inputbox and completes the observable.
 								labelInputAbortController.abort();
 							}
 						}),

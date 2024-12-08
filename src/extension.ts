@@ -249,9 +249,9 @@ function gotoCharTimer() {
 			rxops.switchMap(input => rxjs.from(findCandidatesForAllEditors(input, Array.from(visibleRanges.keys())))),
 			// if there are matches then decorate them in the editor and start the timeout
 			rxops.tap(matchesMap => {
-				let hasAnyMatches = Array.from(matchesMap).reduce((acc, [editor, ranges]) => {
+				const hasAnyMatches = Array.from(matchesMap).reduce((hasAnyMatches, [editor, ranges]) => {
 					editor.setDecorations(incrementalMatchDecoration, ranges);
-					return ranges.length > 0 || acc;
+					return hasAnyMatches || ranges.length > 0;
 				}, false);
 				if (hasAnyMatches) {
 					incrementalSearchTimeoutController.startTimeout();

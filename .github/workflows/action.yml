@@ -13,26 +13,38 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout GotoCharTimer
-      uses: actions/checkout@v4
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checkout GotoCharTimer
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: 18.x
-        cache: npm
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18.x
+          cache: npm
 
-    - name: Install Dependencies
-      run: npm install
+      - name: Install Dependencies
+        run: npm install
 
-    - name: Publish to VSCode Marketplace
-      env:
-        VSCODE_MARKETPLACE_TOKEN: ${{ secrets.VSCODE_MARKETPLACE_TOKEN }}
-      run: |
-        git config --global user.email "bot@rgkirch.github.io"
-        git config --global user.name "bot"
-        npx vsce publish patch -p $VSCODE_MARKETPLACE_TOKEN
-        git push origin master
+      - name: git setup
+        run: |
+          git config --global user.email "bot@rgkirch.github.io"
+          git config --global user.name "bot"
 
+      - name: Publish to VSCode Marketplace
+        env:
+          VSCODE_MARKETPLACE_TOKEN: ${{ secrets.VSCODE_MARKETPLACE_TOKEN }}
+        run: |
+          npx vsce publish patch -p $VSCODE_MARKETPLACE_TOKEN
+          git push origin master
+
+      - name: update loc
+        run: |
+          LOC=$(npx cloc --quiet --json src/extension.ts | jq '.SUM.code')
+          sed -i "s/Only .* lines of code!!/Only $LOC lines of code!!/" README.md
+          if [ -n "$(git status --porcelain README.md)" ]; then
+            git add README.md
+            git commit -m "Update lines of code in README"
+            git push origin master
+          fi

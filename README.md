@@ -1,3 +1,5 @@
+Only 200 lines of code!!
+
 # goto-char-timer
 
 like emacs avy-goto-char-timer

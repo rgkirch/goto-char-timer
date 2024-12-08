@@ -5,11 +5,10 @@ import * as rxops from 'rxjs/operators';
 
 const commandId = 'GotoCharTimer.gotoCharTimer';
 
-function getIncrementalMatchDecoration() {
-	return vscode.window.createTextEditorDecorationType({
-		backgroundColor: new ThemeColor('editor.wordHighlightBackground')
-	});
-}
+const incrementalMatchDecoration = vscode.window.createTextEditorDecorationType({
+	backgroundColor: new ThemeColor('editor.wordHighlightBackground')
+});
+
 
 function jumpLabelDecoration(contentText: string) {
 	return vscode.window.createTextEditorDecorationType({
@@ -176,7 +175,7 @@ function gotoCharTimer() {
 				incrementalSearchTimeoutController.stopTimeout();
 				var hasAnyMatches = false;
 				matchesMap.forEach((ranges, editor) => {
-					editor.setDecorations(getIncrementalMatchDecoration(), ranges);
+					editor.setDecorations(incrementalMatchDecoration, ranges);
 					hasAnyMatches = true;
 				});
 				if (hasAnyMatches) {
@@ -186,7 +185,7 @@ function gotoCharTimer() {
 			rxops.last(),
 			rxops.tap(matchesMap => {
 				matchesMap.forEach((_, editor) => {
-					editor.setDecorations(getIncrementalMatchDecoration(), []);
+					editor.setDecorations(incrementalMatchDecoration, []);
 				});
 
 			}),

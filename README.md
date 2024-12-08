@@ -40,6 +40,9 @@ This extension contributes the following settings:
 ### messes up marked regions
 when it jumps the cursor, it creates a new selected region start and end. it should not do that...
 
+### lables are longer than they need to be
+if there's enough matches to bump up the label length then all lables are longer even though you might have an unambiguous match at a shorter number of characters
+
 ## Release Notes
 
 ### 1.0.0

@@ -1,4 +1,4 @@
-Only 238 lines of code!!
+Only 236 lines of code!!
 
 # goto-char-timer
 

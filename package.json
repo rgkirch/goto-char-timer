@@ -38,7 +38,7 @@
         },
         "gotoCharTimer.timeout": {
           "type": "number",
-          "default": 800
+          "default": 600
         }
       }
     }

@@ -188,7 +188,7 @@ function addDecorations(candidates: [string, vscode.TextEditor, vscode.Range][],
  * @param matchesMap - A map where each key is a vscode.TextEditor and each value is an array of vscode.Range objects representing the matched text ranges.
  */
 function handleLabelInput(matchesMap: Map<vscode.TextEditor, vscode.Range[]>) {
-	const numMatches = Array.from(matchesMap.values()).reduce((acc, ranges) => acc + ranges.length, 0);
+	const numMatches = countMatches(matchesMap);
 	const labelLength = calculateLabelLength(numMatches);
 	const labelGenerator = uniqueLetterCombinations(labelLength);
 	const withLabels: [string, vscode.TextEditor, vscode.Range][] =
@@ -275,7 +275,7 @@ function gotoCharTimer() {
 				});
 			}),
 			rxops.switchMap(matchesMap => {
-				const numMatches: number = Array.from(matchesMap.values()).reduce((acc, ranges) => acc + ranges.length, 0);
+				const numMatches = countMatches(matchesMap);
 				if (numMatches === 1) {
 					const [editor, [range]] = matchesMap.entries().next().value!;
 					jumpToPosition(editor, range!.start);
@@ -361,6 +361,10 @@ class TimeoutControllerImpl implements TimeoutController, OnTimeout {
 
 function createTimeoutController(timeout: number): TimeoutControllerImpl {
 	return new TimeoutControllerImpl(timeout);
+}
+
+function countMatches(matchesMap: Map<vscode.TextEditor, vscode.Range[]>): number {
+    return Array.from(matchesMap.values()).reduce((acc, ranges) => acc + ranges.length, 0);
 }
 
 

@@ -30,7 +30,8 @@ function jumpLabelDecoration(contentText: string) {
  */
 function getLetters(): string {
 	const config = vscode.workspace.getConfiguration('gotoCharTimer');
-	return config.get<string>('charset', 'abcdefghijklmnopqrstuvwxyz');
+	const charset = config.get<string>('charset');
+	return charset?.trim() || 'abcdefghijklmnopqrstuvwxyz';
 }
 
 /**
@@ -256,7 +257,7 @@ function gotoCharTimer() {
 			rxops.tap(() => incrementalSearchTimeoutController.stopTimeout()),
 			// Find all ranges in all visible text editors that match the input.
 			rxops.switchMap(input => rxjs.from(findCandidatesForAllEditors(input, Array.from(visibleRanges.keys())))),
-			// if there are matches then decorate them in the editor and start the timeout
+			// If there are matches then decorate them in the editor and start the timeout.
 			rxops.tap(matchesMap => {
 				const hasAnyMatches = Array.from(matchesMap).reduce((hasAnyMatches, [editor, ranges]) => {
 					editor.setDecorations(incrementalMatchDecoration, ranges);

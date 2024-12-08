@@ -149,6 +149,28 @@ function jumpToPosition(editor: vscode.TextEditor, position: vscode.Position) {
 	editor.selection = new vscode.Selection(position, position);
 }
 
+/*
+ * Clears all decorations from the provided editors.
+ */
+function clearDecorations(matchDecorations: [vscode.TextEditor, vscode.TextEditorDecorationType][]) {
+	matchDecorations.forEach(([editor, decoration]) => {
+		editor.setDecorations(decoration, []);
+	});
+	matchDecorations.length = 0;
+}
+
+/*
+ * Adds decorations to the provided ranges in the editors and returns the updated matchDecorations array.
+ */
+function addDecorations(candidates: [string, vscode.TextEditor, vscode.Range][], matchDecorations: [vscode.TextEditor, vscode.TextEditorDecorationType][]): [vscode.TextEditor, vscode.TextEditorDecorationType][] {
+	candidates.forEach(([label, editor, range]) => {
+		const decoration = jumpLabelDecoration(label);
+		editor.setDecorations(decoration, [range]);
+		matchDecorations.push([editor, decoration]);
+	});
+	return matchDecorations;
+}
+
 /**
  * Activates the `gotoCharTimer` command which allows users to search for a string within the visible ranges of all open editors,
  * and then jump to a specific match by entering a label.
@@ -173,7 +195,7 @@ function gotoCharTimer() {
 			rxops.switchMap(input => rxjs.from(findCandidatesForAllEditors(input, Array.from(visibleRanges.keys())))),
 			rxops.tap(matchesMap => {
 				incrementalSearchTimeoutController.stopTimeout();
-				var hasAnyMatches = false;
+				let hasAnyMatches = false;
 				matchesMap.forEach((ranges, editor) => {
 					editor.setDecorations(incrementalMatchDecoration, ranges);
 					hasAnyMatches = true;
@@ -187,7 +209,6 @@ function gotoCharTimer() {
 				matchesMap.forEach((_, editor) => {
 					editor.setDecorations(incrementalMatchDecoration, []);
 				});
-
 			}),
 			rxops.switchMap(matchesMap => {
 				const numMatches: number = Array.from(matchesMap.values()).reduce((acc, ranges) => acc + ranges.length, 0);
@@ -204,49 +225,33 @@ function gotoCharTimer() {
 							ranges.map(range =>
 								[(labelGenerator.next().value), editor, range] as [string, vscode.TextEditor, vscode.Range]));
 				const labelInputAbortController = new AbortController();
-				var matchDecorations: [vscode.TextEditor, vscode.TextEditorDecorationType][] = [];
+				let matchDecorations: [vscode.TextEditor, vscode.TextEditorDecorationType][] = [];
 				return rxInputBox('Enter a label to jump to', labelInputAbortController.signal)
 					.pipe(
-						// This pipeline adds the jump label decorations and we give it an initial value for it to do that the first time.
+						// The pipeline adds the jump label decorations in a later step and that cade isn't run unless there's some value in the RxJS pipeline.
 						rxops.startWith(''),
-						// Clear the decorations from the previous input. Not needed for the first time.
-						rxops.tap(() => {
-							matchDecorations.forEach(([editor, decoration]) => {
-								editor.setDecorations(decoration, []);
-							});
-							matchDecorations = [];
-						}),
-						// `withLabels` never changes which allows backspacing the input to work. For each input we filter to keep the labels that start with the input and trim them to size.
+						// Clears the decorations from the previous input. Not needed for the first time.
+						rxops.tap(() => clearDecorations(matchDecorations)),
+						// Filters the labels that start with the input and trims them to size.
 						rxops.map(input =>
 							withLabels
 								.filter(([label]) => label.startsWith(input))
 								.map(([label, editor, range]) => [label.slice(input.length), editor, range] as [string, vscode.TextEditor, vscode.Range])
 						),
-						// Add the decorations and record them in `matchDecorations` for later removal.
-						rxops.tap(candidates => {
-							candidates.forEach(([label, editor, range]) => {
-								const decoration = jumpLabelDecoration(label);
-								editor.setDecorations(decoration, [range]);
-								matchDecorations.push([editor, decoration]);
-							});
-						}),
+						// Adds the decorations and records them in `matchDecorations` for later removal.
+						rxops.tap(candidates => matchDecorations = addDecorations(candidates, matchDecorations)),
 						// If there is only one candidate then we can end this and jump to it.
-						rxops.filter((candidates) => {
-							return candidates.length === 1;
-						}),
-						// End the observable.
+						rxops.filter((candidates) => candidates.length === 1),
+						// Ends the observable.
 						rxops.first(),
-						// Clear the decorations and jump to the position.
+						// Clears the decorations and jumps to the position.
 						rxops.tap((candidates) => {
-							matchDecorations.forEach(([editor, decoration]) => {
-								editor.setDecorations(decoration, []);
-							});
-							matchDecorations = [];
+							clearDecorations(matchDecorations);
 							const match = candidates[0];
 							if (match) {
 								const [, editor, range] = match;
 								jumpToPosition(editor, range.start);
-								// This kills the inputbox and completes the observable.
+								// This kills the input box and completes the observable.
 								labelInputAbortController.abort();
 							}
 						}),

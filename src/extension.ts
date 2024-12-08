@@ -60,24 +60,6 @@ async function findCandidates(
 	return ranges;
 }
 
-
-/**
- * Finds all candidate ranges in the given text editor that match the specified text.
- *
- * @param matchText - The text to match within the editor.
- * @param editor - The text editor in which to search for matches.
- * @param abortSignal - The signal to abort the operation.
- * @returns A promise that resolves to a tuple containing the vscode.TextEditor and an array of vscode.Range objects representing the matched ranges.
- */
-async function findAllCandidates(
-	matchText: string,
-	editor: vscode.TextEditor,
-	abortSignal: AbortSignal
-): Promise<[vscode.TextEditor, vscode.Range[]]> {
-	const ranges = await findCandidates(matchText, editor, abortSignal);
-	return [editor, ranges];
-}
-
 /**
  * Finds all matching text candidates for all provided editors.
  *
@@ -95,8 +77,8 @@ async function findCandidatesForAllEditors(
 	const matchesMap = new Map<vscode.TextEditor, vscode.Range[]>();
 	const abortController = new AbortController();
 	for (const editor of editors) {
-		const [editorKey, ranges] = await findAllCandidates(matchText, editor, abortController.signal);
-		matchesMap.set(editorKey, ranges);
+		const ranges = await findCandidates(matchText, editor, abortController.signal);
+		matchesMap.set(editor, ranges);
 	}
 	return matchesMap;
 }

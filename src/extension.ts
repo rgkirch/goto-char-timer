@@ -30,8 +30,7 @@ function jumpLabelDecoration(contentText: string) {
  */
 function getLetters(): string {
 	const config = vscode.workspace.getConfiguration('gotoCharTimer');
-	const charset = config.get<string>('charset');
-	return charset?.trim() || 'abcdefghijklmnopqrstuvwxyz';
+	return config.get<string>('charset')?.trim() || 'abcdefghijklmnopqrstuvwxyz';
 }
 
 /**
@@ -365,9 +364,6 @@ function createTimeoutController(timeout: number): TimeoutControllerImpl {
 }
 
 function countMatches(matchesMap: Map<vscode.TextEditor, vscode.Range[]>): number {
-    return Array.from(matchesMap.values()).reduce((acc, ranges) => acc + ranges.length, 0);
+	return Array.from(matchesMap.values()).reduce((acc, ranges) => acc + ranges.length, 0);
 }
-
-
-
 

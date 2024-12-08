@@ -37,7 +37,8 @@ This extension contributes the following settings:
 
 ## Known Issues
 
-🤷
+### messes up marked regions
+when it jumps the cursor, it creates a new selected region start and end. it should not do that...
 
 ## Release Notes
 

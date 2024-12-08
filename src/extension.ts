@@ -30,7 +30,9 @@ function jumpLabelDecoration(contentText: string) {
  */
 function getLetters(): string {
 	const config = vscode.workspace.getConfiguration('gotoCharTimer');
-	return config.get<string>('charset')?.trim() || 'abcdefghijklmnopqrstuvwxyz';
+	const defaultCharset = 'abcdefghijklmnopqrstuvwxyz';
+	const configuredCharset = config.get<string>('charset')?.trim();
+	return (!configuredCharset || configuredCharset.length < 2) ? defaultCharset : configuredCharset;
 }
 
 /**

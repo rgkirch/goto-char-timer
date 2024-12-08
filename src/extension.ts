@@ -185,11 +185,20 @@ function addDecorations(candidates: [string, vscode.TextEditor, vscode.Range][],
 /**
  * Handles the input for jumping to a specific match.
  *
- * @param withLabels - An array of tuples containing the label, editor, and range.
- * @param matchDecorations - An array to store the editor and its corresponding decoration type.
- * @param labelInputAbortController - The abort controller for the input box.
+ * @param matchesMap - A map where each key is a vscode.TextEditor and each value is an array of vscode.Range objects representing the matched text ranges.
  */
-function handleLabelInput(withLabels: [string, vscode.TextEditor, vscode.Range][], matchDecorations: [vscode.TextEditor, vscode.TextEditorDecorationType][], labelInputAbortController: AbortController) {
+function handleLabelInput(matchesMap: Map<vscode.TextEditor, vscode.Range[]>) {
+	const numMatches = Array.from(matchesMap.values()).reduce((acc, ranges) => acc + ranges.length, 0);
+	const labelLength = calculateLabelLength(numMatches);
+	const labelGenerator = uniqueLetterCombinations(labelLength);
+	const withLabels: [string, vscode.TextEditor, vscode.Range][] =
+		Array.from(matchesMap)
+			.flatMap(([editor, ranges]) =>
+				ranges.map(range =>
+					[(labelGenerator.next().value), editor, range] as [string, vscode.TextEditor, vscode.Range]));
+
+	const labelInputAbortController = new AbortController();
+	let matchDecorations: [vscode.TextEditor, vscode.TextEditorDecorationType][] = [];
 	return rxInputBox('Enter a label to jump to', labelInputAbortController.signal)
 		.pipe(
 			// The pipeline adds the jump label decorations in a later step and that code isn't run unless there's some value in the RxJS pipeline.
@@ -257,7 +266,9 @@ function gotoCharTimer() {
 					incrementalSearchTimeoutController.startTimeout();
 				}
 			}),
+			// The timeout will close the input box and complete the observable with the matches.
 			rxops.last(),
+			// Clear the incremental search decorations.
 			rxops.tap(matchesMap => {
 				matchesMap.forEach((_, editor) => {
 					editor.setDecorations(incrementalMatchDecoration, []);
@@ -270,16 +281,7 @@ function gotoCharTimer() {
 					jumpToPosition(editor, range!.start);
 					return rxjs.EMPTY;
 				}
-				const labelLength: number = calculateLabelLength(numMatches);
-				const labelGenerator: Generator<string> = uniqueLetterCombinations(labelLength);
-				const withLabels: [string, vscode.TextEditor, vscode.Range][] =
-					Array.from(matchesMap)
-						.flatMap(([editor, ranges]) =>
-							ranges.map(range =>
-								[(labelGenerator.next().value), editor, range] as [string, vscode.TextEditor, vscode.Range]));
-				const labelInputAbortController = new AbortController();
-				let matchDecorations: [vscode.TextEditor, vscode.TextEditorDecorationType][] = [];
-				return handleLabelInput(withLabels, matchDecorations, labelInputAbortController);
+				return handleLabelInput(matchesMap);
 			})
 		).subscribe();
 }

@@ -5,32 +5,13 @@ import * as rxops from 'rxjs/operators';
 
 const commandId = 'GotoCharTimer.gotoCharTimer';
 
-const debug = true; // Set this to false to disable logging
-
-function logDebug(message: string) {
-	if (debug) {
-		console.log(message);
-	}
-}
-
-function memoize<T extends (...args: any[]) => any>(fn: T): T {
-	const cache = new Map<string, ReturnType<T>>();
-	return function (...args: Parameters<T>): ReturnType<T> {
-		const key = JSON.stringify(args);
-		if (!cache.has(key)) {
-			cache.set(key, fn(...args));
-		}
-		return cache.get(key)!;
-	} as T;
-}
-
-const getIncrementalMatchDecoration = memoize(() => {
+function getIncrementalMatchDecoration() {
 	return vscode.window.createTextEditorDecorationType({
 		backgroundColor: new ThemeColor('editor.wordHighlightBackground')
 	});
-});
+}
 
-const jumpLabelDecoration = memoize((contentText: string) => {
+function jumpLabelDecoration(contentText: string) {
 	return vscode.window.createTextEditorDecorationType({
 		backgroundColor: new ThemeColor('editor.wordHighlightBackground'),
 		before: {
@@ -42,7 +23,7 @@ const jumpLabelDecoration = memoize((contentText: string) => {
 			borderColor: '#4169E1',
 		},
 	});
-});
+}
 
 function getLetters(): string {
 	const config = vscode.workspace.getConfiguration('gotoCharTimer');
@@ -109,7 +90,6 @@ async function findCandidatesForAllEditors(
 	editors: readonly vscode.TextEditor[],
 ): Promise<Map<vscode.TextEditor, vscode.Range[]>> {
 	if (!matchText) {
-		logDebug('Match text is empty, clearing decorations');
 		return new Map(editors.map(editor => [editor, []] as [vscode.TextEditor, vscode.Range[]]));
 	}
 	const matchesMap = new Map<vscode.TextEditor, vscode.Range[]>();
@@ -203,7 +183,6 @@ function jumpToPosition(editor: vscode.TextEditor, position: vscode.Position) {
  * The function uses RxJS operators to handle asynchronous operations and manage the observable streams.
  */
 function gotoCharTimer() {
-	logDebug(`Command ${commandId} Activated`);
 	const visibleRanges = textEditorVisibleRanges();
 	const config = vscode.workspace.getConfiguration('gotoCharTimer');
 	const timeout = config.get<number>('timeout', 800); // Read timeout from configuration
@@ -224,7 +203,6 @@ function gotoCharTimer() {
 			}),
 			rxops.last(),
 			rxops.tap(matchesMap => {
-				logDebug('Input box closed');
 				matchesMap.forEach((_, editor) => {
 					editor.setDecorations(getIncrementalMatchDecoration(), []);
 				});
@@ -232,7 +210,6 @@ function gotoCharTimer() {
 			}),
 			rxops.switchMap(matchesMap => {
 				const numMatches: number = Array.from(matchesMap.values()).reduce((acc, ranges) => acc + ranges.length, 0);
-				logDebug(`Number of matches: ${numMatches}`);
 				if (numMatches === 1) {
 					const [editor, [range]] = matchesMap.entries().next().value!;
 					jumpToPosition(editor, range!.start);
@@ -315,7 +292,6 @@ export function* uniqueLetterCombinations(length: number, letters: string = getL
  */
 export function activate({ subscriptions }: vscode.ExtensionContext) {
 	vscode.window.showInformationMessage('GotoCharTimer extension activated');
-	logDebug(`Registering command ${commandId}`);
 	subscriptions.push(vscode.commands.registerCommand(commandId, () => gotoCharTimer()));
 }
 

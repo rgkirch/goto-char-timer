@@ -183,6 +183,46 @@ function addDecorations(candidates: [string, vscode.TextEditor, vscode.Range][],
 }
 
 /**
+ * Handles the input for jumping to a specific match.
+ *
+ * @param withLabels - An array of tuples containing the label, editor, and range.
+ * @param matchDecorations - An array to store the editor and its corresponding decoration type.
+ * @param labelInputAbortController - The abort controller for the input box.
+ */
+function handleLabelInput(withLabels: [string, vscode.TextEditor, vscode.Range][], matchDecorations: [vscode.TextEditor, vscode.TextEditorDecorationType][], labelInputAbortController: AbortController) {
+	return rxInputBox('Enter a label to jump to', labelInputAbortController.signal)
+		.pipe(
+			// The pipeline adds the jump label decorations in a later step and that code isn't run unless there's some value in the RxJS pipeline.
+			rxops.startWith(''),
+			// Clears the decorations from the previous input. Not needed for the first time.
+			rxops.tap(() => clearDecorations(matchDecorations)),
+			// Filters the labels that start with the input and trims them to size.
+			rxops.map(input =>
+				withLabels
+					.filter(([label]) => label.startsWith(input))
+					.map(([label, editor, range]) => [label.slice(input.length), editor, range] as [string, vscode.TextEditor, vscode.Range])
+			),
+			// Adds the decorations and records them in `matchDecorations` for later removal.
+			rxops.tap(candidates => matchDecorations = addDecorations(candidates, matchDecorations)),
+			// If there is only one candidate then we can end this and jump to it.
+			rxops.filter((candidates) => candidates.length === 1),
+			// Ends the observable.
+			rxops.first(),
+			// Clears the decorations and jumps to the position.
+			rxops.tap((candidates) => {
+				clearDecorations(matchDecorations);
+				const match = candidates[0];
+				if (match) {
+					const [, editor, range] = match;
+					jumpToPosition(editor, range.start);
+					// This kills the input box and completes the observable.
+					labelInputAbortController.abort();
+				}
+			}),
+		);
+}
+
+/**
  * Activates the `gotoCharTimer` command which allows users to search for a string within the visible ranges of all open editors,
  * and then jump to a specific match by entering a label.
  *
@@ -203,14 +243,16 @@ function gotoCharTimer() {
 	const incrementalSearchTimeoutController = createTimeoutController(timeout);
 	rxInputBox('Enter a string to search for', incrementalSearchTimeoutController.signal)
 		.pipe(
+			// The timeout should start when there are matches and should not count the time search for matches or adding decorations
+			rxops.tap(() => incrementalSearchTimeoutController.stopTimeout()),
+			// Find all ranges in all visible text editors that match the input.
 			rxops.switchMap(input => rxjs.from(findCandidatesForAllEditors(input, Array.from(visibleRanges.keys())))),
+			// if there are matches then decorate them in the editor and start the timeout
 			rxops.tap(matchesMap => {
-				incrementalSearchTimeoutController.stopTimeout();
-				let hasAnyMatches = false;
-				matchesMap.forEach((ranges, editor) => {
+				let hasAnyMatches = Array.from(matchesMap).reduce((acc, [editor, ranges]) => {
 					editor.setDecorations(incrementalMatchDecoration, ranges);
-					hasAnyMatches = true;
-				});
+					return ranges.length > 0 || acc;
+				}, false);
 				if (hasAnyMatches) {
 					incrementalSearchTimeoutController.startTimeout();
 				}
@@ -237,36 +279,7 @@ function gotoCharTimer() {
 								[(labelGenerator.next().value), editor, range] as [string, vscode.TextEditor, vscode.Range]));
 				const labelInputAbortController = new AbortController();
 				let matchDecorations: [vscode.TextEditor, vscode.TextEditorDecorationType][] = [];
-				return rxInputBox('Enter a label to jump to', labelInputAbortController.signal)
-					.pipe(
-						// The pipeline adds the jump label decorations in a later step and that cade isn't run unless there's some value in the RxJS pipeline.
-						rxops.startWith(''),
-						// Clears the decorations from the previous input. Not needed for the first time.
-						rxops.tap(() => clearDecorations(matchDecorations)),
-						// Filters the labels that start with the input and trims them to size.
-						rxops.map(input =>
-							withLabels
-								.filter(([label]) => label.startsWith(input))
-								.map(([label, editor, range]) => [label.slice(input.length), editor, range] as [string, vscode.TextEditor, vscode.Range])
-						),
-						// Adds the decorations and records them in `matchDecorations` for later removal.
-						rxops.tap(candidates => matchDecorations = addDecorations(candidates, matchDecorations)),
-						// If there is only one candidate then we can end this and jump to it.
-						rxops.filter((candidates) => candidates.length === 1),
-						// Ends the observable.
-						rxops.first(),
-						// Clears the decorations and jumps to the position.
-						rxops.tap((candidates) => {
-							clearDecorations(matchDecorations);
-							const match = candidates[0];
-							if (match) {
-								const [, editor, range] = match;
-								jumpToPosition(editor, range.start);
-								// This kills the input box and completes the observable.
-								labelInputAbortController.abort();
-							}
-						}),
-					);
+				return handleLabelInput(withLabels, matchDecorations, labelInputAbortController);
 			})
 		).subscribe();
 }

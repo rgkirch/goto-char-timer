@@ -9,7 +9,6 @@ const incrementalMatchDecoration = vscode.window.createTextEditorDecorationType(
 	backgroundColor: new ThemeColor('editor.wordHighlightBackground')
 });
 
-
 function jumpLabelDecoration(contentText: string) {
 	return vscode.window.createTextEditorDecorationType({
 		backgroundColor: new ThemeColor('editor.wordHighlightBackground'),
@@ -24,12 +23,24 @@ function jumpLabelDecoration(contentText: string) {
 	});
 }
 
+/**
+ * Retrieves the character set from the extension configuration.
+ *
+ * @returns A string containing the character set.
+ */
 function getLetters(): string {
 	const config = vscode.workspace.getConfiguration('gotoCharTimer');
 	return config.get<string>('charset', 'abcdefghijklmnopqrstuvwxyz');
 }
 
-// find all occurrences of matchText in editor. return as observable of ranges.
+/**
+ * Finds all occurrences of matchText in the editor and returns them as a promise of ranges.
+ *
+ * @param matchText - The text to match within the editor.
+ * @param editor - The text editor to search within.
+ * @param abortSignal - The signal to abort the operation.
+ * @returns A promise that resolves to an array of vscode.Range objects representing the matched text ranges.
+ */
 async function findCandidates(
 	matchText: string,
 	editor: vscode.TextEditor,

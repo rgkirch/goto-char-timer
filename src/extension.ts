@@ -319,9 +319,7 @@ export function activate({ subscriptions }: vscode.ExtensionContext) {
 }
 
 // This method is called when your extension is deactivated
-export function deactivate() {
-	console.log('GotoCharTimer extension deactivated');
-}
+export function deactivate() { }
 
 interface TimeoutController {
 	startTimeout: () => void;

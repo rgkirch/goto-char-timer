@@ -1,5 +1,14 @@
 Only 246 lines of code!!
 
+
+tokei src/
+cloc
+sonarqube
+codeclimate
+scitools
+eslint
+
+
 # goto-char-timer
 
 like emacs avy-goto-char-timer

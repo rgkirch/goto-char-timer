@@ -24,5 +24,9 @@ export default [{
         eqeqeq: "warn",
         "no-throw-literal": "warn",
         semi: "warn",
+        
+        // Add complexity checking
+        "complexity": ["warn", { max: 4 }],
+        "max-lines-per-function": ["warn", { max: 40 }]
     },
 }];

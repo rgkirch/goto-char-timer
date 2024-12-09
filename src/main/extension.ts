@@ -175,13 +175,12 @@ function clearDecorations(matchDecorations: [vscode.TextEditor, vscode.TextEdito
 /*
  * Adds decorations to the provided ranges in the editors and returns the updated matchDecorations array.
  */
-function addDecorations(candidates: [string, vscode.TextEditor, vscode.Range][], matchDecorations: [vscode.TextEditor, vscode.TextEditorDecorationType][]): [vscode.TextEditor, vscode.TextEditorDecorationType][] {
-	candidates.forEach(([label, editor, range]) => {
-		const decoration = jumpLabelDecoration(label);
-		editor.setDecorations(decoration, [range]);
-		matchDecorations.push([editor, decoration]);
-	});
-	return matchDecorations;
+function addDecorations(candidates: [string, vscode.TextEditor, vscode.Range][]): [vscode.TextEditor, vscode.TextEditorDecorationType][] {
+    return candidates.map(([label, editor, range]) => {
+        const decoration = jumpLabelDecoration(label);
+        editor.setDecorations(decoration, [range]);
+        return [editor, decoration];
+    });
 }
 
 /**
@@ -193,44 +192,41 @@ function handleLabelInput(matchesMap: Map<vscode.TextEditor, vscode.Range[]>) {
 	const numMatches = countMatches(matchesMap);
 	const labelLength = calculateLabelLength(numMatches);
 	const labelGenerator = uniqueLetterCombinations(labelLength);
-	const withLabels: [string, vscode.TextEditor, vscode.Range][] =
-		Array.from(matchesMap)
-			.flatMap(([editor, ranges]) =>
-				ranges.map(range =>
-					[(labelGenerator.next().value), editor, range] as [string, vscode.TextEditor, vscode.Range]));
+	const withLabels = generateLabels(matchesMap, labelGenerator);
 
 	const labelInputAbortController = new AbortController();
 	let matchDecorations: [vscode.TextEditor, vscode.TextEditorDecorationType][] = [];
 	return rxInputBox('Enter a label to jump to', labelInputAbortController.signal)
 		.pipe(
-			// The pipeline adds the jump label decorations in a later step and that code isn't run unless there's some value in the RxJS pipeline.
 			rxops.startWith(''),
-			// Clears the decorations from the previous input. Not needed for the first time.
 			rxops.tap(() => clearDecorations(matchDecorations)),
-			// Filters the labels that start with the input and trims them to size.
-			rxops.map(input =>
-				withLabels
-					.filter(([label]) => label.startsWith(input))
-					.map(([label, editor, range]) => [label.slice(input.length), editor, range] as [string, vscode.TextEditor, vscode.Range])
-			),
-			// Adds the decorations and records them in `matchDecorations` for later removal.
-			rxops.tap(candidates => matchDecorations = addDecorations(candidates, matchDecorations)),
-			// If there is only one candidate then we can end this and jump to it.
+			rxops.map(input => filterLabels(withLabels, input)),
+			rxops.tap(candidates => matchDecorations = addDecorations(candidates)),
 			rxops.filter((candidates) => candidates.length === 1),
-			// Ends the observable.
 			rxops.first(),
-			// Clears the decorations and jumps to the position.
 			rxops.tap((candidates) => {
 				const match = candidates[0];
 				if (match) {
 					const [, editor, range] = match;
 					jumpToPosition(editor, range.start);
-					// This kills the input box and completes the observable.
 					labelInputAbortController.abort();
 				}
 			}),
 			rxops.finalize(() => clearDecorations(matchDecorations))
 		);
+}
+
+function generateLabels(matchesMap: Map<vscode.TextEditor, vscode.Range[]>, labelGenerator: Generator<string>): [string, vscode.TextEditor, vscode.Range][] {
+	return Array.from(matchesMap)
+		.flatMap(([editor, ranges]) =>
+			ranges.map(range =>
+				[(labelGenerator.next().value), editor, range] as [string, vscode.TextEditor, vscode.Range]));
+}
+
+function filterLabels(withLabels: [string, vscode.TextEditor, vscode.Range][], input: string): [string, vscode.TextEditor, vscode.Range][] {
+	return withLabels
+		.filter(([label]) => label.startsWith(input))
+		.map(([label, editor, range]) => [label.slice(input.length), editor, range] as [string, vscode.TextEditor, vscode.Range]);
 }
 
 /**

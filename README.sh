@@ -1,11 +1,15 @@
-Only 246 lines of code!!
+cat << 'EOF'
 
-tokei src/
+Only $(npx cloc --quiet --json src/main | jq '.SUM.code') lines of code!!
+
+tokei
+$(tokei src/main)
+
 cloc
-sonarqube
-codeclimate
-scitools
-eslint
+$(cloc src/main)
+
+elint
+$(eslint src/main)
 
 # goto-char-timer
 
@@ -76,3 +80,5 @@ You can author your README using Visual Studio Code. Here are some useful editor
 * [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
 
 **Enjoy!**
+
+EOF

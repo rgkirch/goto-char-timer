@@ -13,12 +13,12 @@ function jumpLabelDecoration(contentText: string) {
 	return vscode.window.createTextEditorDecorationType({
 		backgroundColor: new ThemeColor('editor.wordHighlightBackground'),
 		before: {
+			border: '1px solid white',
 			contentText: contentText,
-			margin: '0 5px 0 5px',
 			backgroundColor: '#4169E1',
-			border: '3px solid',
 			color: 'white',
-			borderColor: '#4169E1',
+			borderColor: 'white',
+			textDecoration: 'none; position: absolute;',
 		},
 	});
 }

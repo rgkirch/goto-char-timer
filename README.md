@@ -1,6 +1,7 @@
 Only 246 lines of code!!
 
 
+
 # goto-char-timer
 
 like emacs avy-goto-char-timer
@@ -35,13 +36,6 @@ character set to use for jump labels
 
 default: abcdefghijklmnopqrstuvwxyz
 
-e.g.
-
-This extension contributes the following settings:
-
-* 'gotoCharTimer.timeout': Enable/disable this extension.
-* 'gotoCharTimeout.charset': e.g. 'asdfghjkl' for homerow or 'aoeuidhtns' for dvorak homerow. defaults to 'abcdefghijklmnopqrstuvwxyz'
-
 ## Known Issues
 
 ### messes up marked regions
@@ -49,31 +43,4 @@ when it jumps the cursor, it creates a new selected region start and end. it sho
 
 ### lables are longer than they need to be
 if there's enough matches to bump up the label length then all lables are longer even though you might have an unambiguous match at a shorter number of characters
-
-## Release Notes
-
-### 1.0.0
-
-Initial release.
-
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor ('Cmd+\' on macOS or 'Ctrl+\' on Windows and Linux).
-* Toggle preview ('Shift+Cmd+V' on macOS or 'Shift+Ctrl+V' on Windows and Linux).
-* Press 'Ctrl+Space' (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
 

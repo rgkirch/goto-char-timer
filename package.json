@@ -2,7 +2,7 @@
   "name": "goto-char-timer",
   "displayName": "GotoCharTimer",
   "description": "gets you there without fuss",
-  "version": "0.0.61",
+  "version": "0.0.62",
   "publisher": "rgkirch",
   "engines": {
     "vscode": "^1.93.0"

@@ -41,7 +41,7 @@ jobs:
 
       - name: update loc
         run: |
-          ./README.sh > README.md
+          sh README.sh > README.md
           if [ -n "$(git status --porcelain README.md)" ]; then
             git add README.md
             git commit -m "Update lines of code in README"

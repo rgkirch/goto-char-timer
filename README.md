@@ -34,9 +34,9 @@ There are other similar extensions but I didn't find any that worked the way I w
 
 ## Extension Settings
 
-TODO timeout
+timeout
 
-TODO character set to use for jump completions
+character set to use for jump completions
 
 e.g.
 

@@ -1,6 +1,6 @@
 Only 246 lines of code!!
 
-github.com/AlDanial/cloc v 2.02  T=0.01 s (89.7 files/s, 32906.0 lines/s)
+github.com/AlDanial/cloc v 2.02  T=0.01 s (90.7 files/s, 33278.8 lines/s)
 -------------------------------------------------------------------------------
 Language                     files          blank        comment           code
 -------------------------------------------------------------------------------
@@ -31,9 +31,15 @@ There are other similar extensions but I didn't find any that worked the way I w
 
 ## Extension Settings
 
-timeout
+### timeout
+when typing the text to search for, if you pause for this many milliseconds, any text matching the string will be highlighted
 
-character set to use for jump completions
+default: 500ms
+
+### charset
+character set to use for jump labels
+
+default: abcdefghijklmnopqrstuvwxyz
 
 e.g.
 

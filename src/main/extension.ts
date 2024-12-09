@@ -157,9 +157,10 @@ export function calculateLabelLength(numMatches: number): number {
  * @param editor - The text editor in which to jump.
  * @param position - The position to jump to.
  */
-function jumpToPosition(editor: vscode.TextEditor, position: vscode.Position) {
-	editor.revealRange(new vscode.Range(position, position));
-	editor.selection = new vscode.Selection(position, position);
+async function jumpToPosition(editor: vscode.TextEditor, position: vscode.Position) {
+    await vscode.window.showTextDocument(editor.document, { viewColumn: editor.viewColumn });
+    editor.selection = new vscode.Selection(position, position);
+    editor.revealRange(new vscode.Range(position, position));
 }
 
 /*
@@ -189,12 +190,11 @@ function addDecorations(candidates: [string, vscode.TextEditor, vscode.Range][])
  * @param matchesMap - A map where each key is a vscode.TextEditor and each value is an array of vscode.Range objects representing the matched text ranges.
  */
 function handleLabelInput(matchesMap: Map<vscode.TextEditor, vscode.Range[]>) {
-	const numMatches = countMatches(matchesMap);
-	const labelLength = calculateLabelLength(numMatches);
-	const labelGenerator = uniqueLetterCombinations(labelLength);
-	const withLabels = generateLabels(matchesMap, labelGenerator);
-
-	const labelInputAbortController = new AbortController();
+	const numMatches: number = countMatches(matchesMap);
+	const labelLength: number = calculateLabelLength(numMatches);
+	const labelGenerator: Generator<string> = uniqueLetterCombinations(labelLength);
+	const withLabels: [string, vscode.TextEditor, vscode.Range][] = generateLabels(matchesMap, labelGenerator);
+	const labelInputAbortController: AbortController = new AbortController();
 	let matchDecorations: [vscode.TextEditor, vscode.TextEditorDecorationType][] = [];
 	return rxInputBox('Enter a label to jump to', labelInputAbortController.signal)
 		.pipe(

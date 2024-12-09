@@ -1,4 +1,4 @@
-Only 246 lines of code!!
+Only 244 lines of code!!
 
 
 tokei src/

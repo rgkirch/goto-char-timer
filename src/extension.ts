@@ -284,7 +284,16 @@ function gotoCharTimer() {
 					return rxjs.EMPTY;
 				}
 				return handleLabelInput(matchesMap);
-			})
+			}),
+			rxops.catchError((error) => {
+				console.error('Error in gotoCharTimer:', error);
+				return rxjs.EMPTY;
+			}),
+			rxops.tap({
+				complete: () => console.log('gotoCharTimer observable completed'),
+				error: (error) => console.error('gotoCharTimer observable error:', error)
+			}),
+			rxops.finalize(() => console.log('gotoCharTimer observable finalized'))
 		).subscribe();
 }
 
@@ -319,7 +328,9 @@ export function activate({ subscriptions }: vscode.ExtensionContext) {
 }
 
 // This method is called when your extension is deactivated
-export function deactivate() { }
+export function deactivate() { 
+	console.log('GotoCharTimer extension deactivated');
+}
 
 interface TimeoutController {
 	startTimeout: () => void;

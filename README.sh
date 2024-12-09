@@ -1,15 +1,10 @@
-cat << 'EOF'
+cat << EOF
 
 Only $(npx cloc --quiet --json src/main | jq '.SUM.code') lines of code!!
-
-tokei
-$(tokei src/main)
 
 cloc
 $(cloc src/main)
 
-elint
-$(eslint src/main)
 
 # goto-char-timer
 

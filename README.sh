@@ -5,7 +5,6 @@ Only $(npx cloc --quiet --json src/main | jq '.SUM.code') lines of code!!
 cloc
 $(cloc src/main)
 
-
 # goto-char-timer
 
 like emacs avy-goto-char-timer

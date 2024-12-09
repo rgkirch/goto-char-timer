@@ -41,7 +41,7 @@ jobs:
 
       - name: update loc
         run: |
-          LOC=$(npx cloc --quiet --json src/extension.ts | jq '.SUM.code')
+          LOC=$(npx cloc --quiet --json src/main | jq '.SUM.code')
           sed -i "s/Only .* lines of code!!/Only $LOC lines of code!!/" README.md
           if [ -n "$(git status --porcelain README.md)" ]; then
             git add README.md

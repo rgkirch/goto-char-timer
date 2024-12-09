@@ -221,7 +221,6 @@ function handleLabelInput(matchesMap: Map<vscode.TextEditor, vscode.Range[]>) {
 			rxops.first(),
 			// Clears the decorations and jumps to the position.
 			rxops.tap((candidates) => {
-				clearDecorations(matchDecorations);
 				const match = candidates[0];
 				if (match) {
 					const [, editor, range] = match;
@@ -229,7 +228,8 @@ function handleLabelInput(matchesMap: Map<vscode.TextEditor, vscode.Range[]>) {
 					// This kills the input box and completes the observable.
 					labelInputAbortController.abort();
 				}
-			}),
+				}),
+			rxops.finalize(() => clearDecorations(matchDecorations))
 		);
 }
 

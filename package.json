@@ -58,7 +58,7 @@
     "test": "vscode-test"
   },
   "devDependencies": {
-    "@eslint/js": "^9.16.0",
+    "@eslint/js": "^9.17.0",
     "@types/mocha": "^10.0.9",
     "@types/node": "22.x",
     "@types/vscode": "^1.93.0",

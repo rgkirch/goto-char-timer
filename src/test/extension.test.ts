@@ -5,14 +5,15 @@ import * as sinon from 'sinon';
 
 test('sinon stub basics', () => {
     const stub = sinon.stub();
+    // Configure specific calls first
+    stub.onFirstCall().returns('first');
+    stub.onSecondCall().returns('second');
+    // Then set default behavior last
     stub.returns(42);
-    assert.strictEqual(stub(), 42);
     
-    stub.onCall(0).returns('first');
-    stub.onCall(1).returns('second');
     assert.strictEqual(stub(), 'first');
     assert.strictEqual(stub(), 'second');
-    assert.strictEqual(stub(), 42); // falls back to last returns
+    assert.strictEqual(stub(), 42); // falls back to default
 });
 
 test('sinon stub with conditional returns', () => {
@@ -101,6 +102,11 @@ test('gotoCharTimer should jump to single match immediately', async () => {
 
     var gotoCharTimerCommand = vscode.commands.executeCommand('GotoCharTimer.gotoCharTimer');
     await new Promise(resolve => setTimeout(resolve, 100));
+
+    assert.strictEqual(inputBox.prompt, 'Enter a string to search for');
+    assert.strictEqual(inputBox.value, '');
+    assert.ok(inputBox.show.calledOnce, 'show should be called once');
+
     simulateUserTyping(inputBox);
 
     await gotoCharTimerCommand;

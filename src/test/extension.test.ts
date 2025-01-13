@@ -92,6 +92,15 @@ test('calculateLabelLength should return correct label length', () => {
     assert.strictEqual(calculateLabelLength(26 * 26 + 1), 3, 'Failed for 26*26+1 matches');
 });
 
+function selectionToTuple(selection: vscode.Selection): [number, number, number, number] {
+    return [
+        selection.anchor.line,
+        selection.anchor.character,
+        selection.active.line,
+        selection.active.character
+    ];
+}
+
 test('gotoCharTimer should jump to single match immediately', async () => {
     const editor = createMockEditor(
         'some text with target here',
@@ -121,8 +130,11 @@ test('gotoCharTimer should jump to single match immediately', async () => {
 
     // Verify the cursor jumped to the correct position
     assert.ok(editor.selection instanceof vscode.Selection, 'Selection should be set');
-    assert.strictEqual(editor.selection.start.line, 0);
-    assert.strictEqual(editor.selection.start.character, 15); // Position of 'target' in the text
+    assert.deepStrictEqual(
+        selectionToTuple(editor.selection),
+        [0, 15, 0, 15],
+        'Cursor should be at target'
+    );
     assert.ok(editor.revealRange.calledOnce, 'revealRange should be called once');
 });
 

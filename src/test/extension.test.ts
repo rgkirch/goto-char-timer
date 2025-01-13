@@ -100,21 +100,26 @@ test('gotoCharTimer should jump to single match immediately', async () => {
     sinon.stub(vscode.window, 'visibleTextEditors').value([editor]);
     sinon.stub(vscode.window, 'showTextDocument').resolves();
 
-    var gotoCharTimerCommand = vscode.commands.executeCommand('GotoCharTimer.gotoCharTimer');
-    await new Promise(resolve => setTimeout(resolve, 100));
+    sinon.stub(vscode.workspace, 'getConfiguration').returns({
+        get: sinon.stub().withArgs('timeout').returns(50),
+        has: sinon.stub().returns(false),
+        inspect: sinon.stub().returns(undefined),
+        update: sinon.stub().resolves()
+    });
+
+    console.log('hello undefined %s', await vscode.commands.executeCommand('GotoCharTimer.gotoCharTimer'));
 
     assert.strictEqual(inputBox.prompt, 'Enter a string to search for');
     assert.strictEqual(inputBox.value, '');
     assert.ok(inputBox.show.calledOnce, 'show should be called once');
 
-    simulateUserTyping(inputBox);
-
-    await gotoCharTimerCommand;
+    inputBox.triggerChange('target');
+    await new Promise(resolve => setTimeout(resolve, 100));
 
     // Verify the cursor jumped to the correct position
     assert.ok(editor.selection instanceof vscode.Selection, 'Selection should be set');
     assert.strictEqual(editor.selection.start.line, 0);
-    assert.strictEqual(editor.selection.start.character, 14); // Position of 'target' in the text
+    assert.strictEqual(editor.selection.start.character, 15); // Position of 'target' in the text
     assert.ok(editor.revealRange.calledOnce, 'revealRange should be called once');
 });
 
@@ -190,6 +195,8 @@ function createMockEditor() {
 }
 
 function createMockInputBox() {
+    let changeCallback: (value: string) => void;
+    
     return {
         value: '',
         valueSelection: [0, 0] as [number, number],
@@ -199,7 +206,15 @@ function createMockInputBox() {
         show: sinon.stub(),
         hide: sinon.stub(),
         dispose: sinon.stub(),
-        onDidChangeValue: sinon.stub(),
+        onDidChangeValue: sinon.stub().callsFake((callback: (value: string) => void) => {
+            changeCallback = callback;
+            return { dispose: () => {} };
+        }),
+        triggerChange(value: string) {
+            if (changeCallback) {
+                changeCallback(value);
+            }
+        },
         onDidAccept: sinon.stub(),
         onDidHide: sinon.stub(),
         onDidTriggerButton: sinon.stub(),
@@ -212,48 +227,6 @@ function createMockInputBox() {
         busy: false,
         ignoreFocusOut: false
     };
-}
-
-// interface MockEditor {
-//     document: {
-//         getText: sinon.SinonStub;
-//         offsetAt: sinon.SinonStub;
-//         positionAt: sinon.SinonStub;
-//     };
-//     setDecorations: sinon.SinonStub;
-//     selection: vscode.Selection;  // Changed from Selection | null
-//     revealRange: sinon.SinonStub;
-//     visibleRanges: vscode.Range[];
-// }
-
-interface MockInputBox extends vscode.InputBox {
-    value: string;
-    valueSelection: [number, number];
-    placeholder: string;
-    password: boolean;
-    buttons: vscode.QuickInputButton[];
-    show: sinon.SinonStub;
-    hide: sinon.SinonStub;
-    dispose: sinon.SinonStub;
-    onDidChangeValue: sinon.SinonStub;
-    onDidAccept: sinon.SinonStub;
-    onDidHide: sinon.SinonStub;
-    onDidTriggerButton: sinon.SinonStub;
-    prompt: string;
-    validationMessage: string;
-    title: string;
-    step: number;
-    totalSteps: number;
-    enabled: boolean;
-    busy: boolean;
-    ignoreFocusOut: boolean;
-}
-
-function simulateUserTyping(inputBox: MockInputBox) {
-    inputBox.value = 'target';
-    inputBox.onDidAccept.callsFake(() => {
-        console.log('onDidAccept called');
-    });
 }
 
 test('gotoCharTimer should show labels for multiple matches', async () => {

@@ -107,7 +107,7 @@ test('gotoCharTimer should jump to single match immediately', async () => {
         update: sinon.stub().resolves()
     });
 
-    console.log('hello undefined %s', await vscode.commands.executeCommand('GotoCharTimer.gotoCharTimer'));
+    await vscode.commands.executeCommand('GotoCharTimer.gotoCharTimer');
 
     assert.strictEqual(inputBox.prompt, 'Enter a string to search for');
     assert.strictEqual(inputBox.value, '');

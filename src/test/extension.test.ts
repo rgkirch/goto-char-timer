@@ -40,31 +40,97 @@ test('calculateLabelLength should return correct label length', () => {
     assert.strictEqual(calculateLabelLength(26 * 26 + 1), 3, 'Failed for 26*26+1 matches');
 });
 
-test('gotoCharTimer should jump to single match immediately', () => {
+test('gotoCharTimer should jump to single match immediately', async () => {
     const editor = createMockEditor();
-    const inputBox = createMockInputBox();
+    var inputBox = createMockInputBox();
 
     sinon.stub(vscode.window, 'createInputBox').returns(inputBox);
     sinon.stub(vscode.window, 'visibleTextEditors').value([editor]);
+    sinon.stub(vscode.window, 'showTextDocument').resolves();
 
     // Simulate user typing 'target'
-    simulateUserTyping(inputBox, editor);
+    var f = simulateUserTyping(inputBox, editor);
 
     // Trigger gotoCharTimer
-    vscode.commands.executeCommand('GotoCharTimer.gotoCharTimer');
+    var gotoCharTimerCommand = vscode.commands.executeCommand('GotoCharTimer.gotoCharTimer');
+
+    f();  // Call the onDidAccept callback
+
+    await gotoCharTimerCommand;
+
+    // Verify the cursor jumped to the correct position
+    assert.ok(editor.selection instanceof vscode.Selection, 'Selection should be set');
+    assert.strictEqual(editor.selection.start.line, 0);
+    assert.strictEqual(editor.selection.start.character, 14); // Position of 'target' in the text
+    assert.ok(editor.revealRange.calledOnce, 'revealRange should be called once');
+});
+
+test('calculateOffsetFromPosition should calculate correct offset for single line', () => {
+    const text = 'hello world';
+    assert.strictEqual(calculateOffsetFromPosition(text, new vscode.Position(0, 0)), 0);
+    assert.strictEqual(calculateOffsetFromPosition(text, new vscode.Position(0, 5)), 5);
+    assert.strictEqual(calculateOffsetFromPosition(text, new vscode.Position(0, text.length)), text.length);
+});
+
+test('calculateOffsetFromPosition should calculate correct offset for multiple lines', () => {
+    const text = 'first line\nsecond line\nthird line';
+    assert.strictEqual(calculateOffsetFromPosition(text, new vscode.Position(0, 0)), 0);
+    assert.strictEqual(calculateOffsetFromPosition(text, new vscode.Position(1, 0)), 11);
+    assert.strictEqual(calculateOffsetFromPosition(text, new vscode.Position(2, 0)), 23);
+    assert.strictEqual(calculateOffsetFromPosition(text, new vscode.Position(1, 6)), 17);
+});
+
+test('calculateOffsetFromPosition should handle empty lines', () => {
+    const text = 'first\n\nlast';
+    assert.strictEqual(calculateOffsetFromPosition(text, new vscode.Position(0, 0)), 0);
+    assert.strictEqual(calculateOffsetFromPosition(text, new vscode.Position(1, 0)), 6);
+    assert.strictEqual(calculateOffsetFromPosition(text, new vscode.Position(2, 0)), 7);
+});
+
+function calculateOffsetFromPosition(documentText: string, position: vscode.Position): number {
+    return documentText
+        .split('\n', position.line)
+        .reduce((acc, line) => acc + line.length, 0)
+        + position.line
+        + position.character;
+}
+
+function calculatePositionFromOffset(documentText: string, offset: number): vscode.Position {
+    const text = documentText.substring(0, offset);
+    const lineNum = (text.match(/\n/g) || []).length;
+    const lastNewlineIndex = text.lastIndexOf('\n');
+    const charNum = lastNewlineIndex === -1 ? text.length : text.length - lastNewlineIndex - 1;
+    return new vscode.Position(lineNum, charNum);
+}
+
+test('calculatePositionFromOffset should handle multi-line text', () => {
+    const text = 'first line\nsecond line\nthird line';
+    assert.deepStrictEqual(calculatePositionFromOffset(text, 0), new vscode.Position(0, 0));
+    assert.deepStrictEqual(calculatePositionFromOffset(text, 5), new vscode.Position(0, 5));
+    assert.deepStrictEqual(calculatePositionFromOffset(text, 11), new vscode.Position(1, 0));
+    assert.deepStrictEqual(calculatePositionFromOffset(text, 17), new vscode.Position(1, 6));
+    assert.deepStrictEqual(calculatePositionFromOffset(text, 23), new vscode.Position(2, 0));
 });
 
 function createMockEditor() {
+    const documentText = 'some text with target here';
+    let currentSelection = new vscode.Selection(0, 0, 0, 0);
+
     return {
         document: {
-            getText: sinon.stub().returns('some text with target here'),
-            offsetAt: sinon.stub().returns(0),
-            positionAt: sinon.stub().returns(new vscode.Position(0, 0))
+            getText: sinon.stub().returns(documentText),
+            offsetAt: sinon.stub().callsFake((position: vscode.Position) => {
+                return calculateOffsetFromPosition(documentText, position);
+            }),
+            positionAt: sinon.stub().callsFake((offset: number) => {
+                return calculatePositionFromOffset(documentText, offset);
+            })
         },
         setDecorations: sinon.stub(),
-        selection: null,
+        get selection() { return currentSelection; },
+        set selection(sel: vscode.Selection) { currentSelection = sel; },
         revealRange: sinon.stub(),
-        visibleRanges: [new vscode.Range(0, 0, 10, 0)]
+        visibleRanges: [new vscode.Range(0, 0, 0, documentText.length)]
     };
 }
 
@@ -100,7 +166,7 @@ interface MockEditor {
         positionAt: sinon.SinonStub;
     };
     setDecorations: sinon.SinonStub;
-    selection: vscode.Selection | null;
+    selection: vscode.Selection;  // Changed from Selection | null
     revealRange: sinon.SinonStub;
     visibleRanges: vscode.Range[];
 }
@@ -130,10 +196,10 @@ interface MockInputBox extends vscode.InputBox {
 
 function simulateUserTyping(inputBox: MockInputBox, editor: MockEditor) {
     inputBox.value = 'target';
-    inputBox.onDidAccept.callsFake(() => {
+    return () => {
+        inputBox.onDidAccept.callArg(0); // Triggers the callback passed to onDidAccept
         assert.strictEqual(editor.setDecorations.called, true);
-        // Add more assertions here to verify the jump behavior
-    });
+    };
 }
 
 test('gotoCharTimer should show labels for multiple matches', async () => {

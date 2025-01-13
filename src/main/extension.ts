@@ -248,40 +248,42 @@ function gotoCharTimer() {
 	const config = vscode.workspace.getConfiguration('gotoCharTimer');
 	const timeout = config.get<number>('timeout', 800); // Read timeout from configuration
 	const incrementalSearchTimeoutController = createTimeoutController(timeout);
+	console.log('Extension activated');
 	rxInputBox('Enter a string to search for', incrementalSearchTimeoutController.signal)
 		.pipe(
-			// The timeout should start when there are matches and should not count the time search for matches or adding decorations
 			rxops.tap(() => incrementalSearchTimeoutController.stopTimeout()),
-			// Find all ranges in all visible text editors that match the input.
 			rxops.switchMap(input => rxjs.from(findCandidatesForAllEditors(input, Array.from(visibleRanges.keys())))),
-			// If there are matches then decorate them in the editor and start the timeout.
-			rxops.tap(matchesMap => {
-				const hasAnyMatches = Array.from(matchesMap).reduce((hasAnyMatches, [editor, ranges]) => {
-					editor.setDecorations(incrementalMatchDecoration, ranges);
-					return hasAnyMatches || ranges.length > 0;
-				}, false);
-				if (hasAnyMatches) {
-					incrementalSearchTimeoutController.startTimeout();
-				}
-			}),
-			// The timeout will close the input box and complete the observable with the matches.
+			rxops.tap(matchesMap => handleMatches(matchesMap, incrementalSearchTimeoutController)),
 			rxops.last(),
-			// Clear the incremental search decorations.
-			rxops.tap(matchesMap => {
-				matchesMap.forEach((_, editor) => {
-					editor.setDecorations(incrementalMatchDecoration, []);
-				});
-			}),
-			rxops.switchMap(matchesMap => {
-				const numMatches = countMatches(matchesMap);
-				if (numMatches === 1) {
-					const [editor, [range]] = matchesMap.entries().next().value!;
-					jumpToPosition(editor, range!.start);
-					return rxjs.EMPTY;
-				}
-				return handleLabelInput(matchesMap);
-			}),
+			rxops.tap(matchesMap => clearIncrementalSearchDecorations(matchesMap)),
+			rxops.switchMap(matchesMap => handleSingleMatchOrLabelInput(matchesMap)),
 		).subscribe();
+}
+
+function handleMatches(matchesMap: Map<vscode.TextEditor, vscode.Range[]>, incrementalSearchTimeoutController: TimeoutController) {
+	const hasAnyMatches = Array.from(matchesMap).reduce((hasAnyMatches, [editor, ranges]) => {
+		editor.setDecorations(incrementalMatchDecoration, ranges);
+		return hasAnyMatches || ranges.length > 0;
+	}, false);
+	if (hasAnyMatches) {
+		incrementalSearchTimeoutController.startTimeout();
+	}
+}
+
+function clearIncrementalSearchDecorations(matchesMap: Map<vscode.TextEditor, vscode.Range[]>) {
+	matchesMap.forEach((_, editor) => {
+		editor.setDecorations(incrementalMatchDecoration, []);
+	});
+}
+
+function handleSingleMatchOrLabelInput(matchesMap: Map<vscode.TextEditor, vscode.Range[]>) {
+	const numMatches = countMatches(matchesMap);
+	if (numMatches === 1) {
+		const [editor, [range]] = matchesMap.entries().next().value!;
+		jumpToPosition(editor, range!.start);
+		return rxjs.EMPTY;
+	}
+	return handleLabelInput(matchesMap);
 }
 
 /**

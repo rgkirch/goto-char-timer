@@ -158,9 +158,9 @@ export function calculateLabelLength(numMatches: number): number {
  * @param position - The position to jump to.
  */
 async function jumpToPosition(editor: vscode.TextEditor, position: vscode.Position) {
-    await vscode.window.showTextDocument(editor.document, { viewColumn: editor.viewColumn });
-    editor.selection = new vscode.Selection(position, position);
-    editor.revealRange(new vscode.Range(position, position));
+	await vscode.window.showTextDocument(editor.document, { viewColumn: editor.viewColumn });
+	editor.selection = new vscode.Selection(editor.selection.anchor, position);
+	editor.revealRange(new vscode.Range(position, position));
 }
 
 /*

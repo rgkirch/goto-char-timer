@@ -39,10 +39,10 @@ default: $(jq -r '.contributes.configuration.properties."gotoCharTimer.charset".
 
 ## Known Issues
 
-### messes up marked regions
-when it jumps the cursor, it creates a new selected region start and end. it should not do that...
-
 ### lables are longer than they need to be
 if there's enough matches to bump up the label length then all lables are longer even though you might have an unambiguous match at a shorter number of characters
+
+# Run Test
+clear && npm run compile && npm run compile-tests && npx vscode-test
 
 EOF

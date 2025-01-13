@@ -132,7 +132,7 @@ test('gotoCharTimer should jump to single match immediately', async () => {
     assert.ok(editor.selection instanceof vscode.Selection, 'Selection should be set');
     assert.deepStrictEqual(
         selectionToTuple(editor.selection),
-        [0, 15, 0, 15],
+        [0, 5, 0, 15],
         'Cursor should be at target'
     );
     assert.ok(editor.revealRange.calledOnce, 'revealRange should be called once');

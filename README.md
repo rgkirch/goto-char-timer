@@ -1,6 +1,11 @@
-Only 247 lines of code!!
+Only 251 lines of code!!
 
-
+github.com/AlDanial/cloc v 2.02  T=0.01 s (90.2 files/s, 33285.3 lines/s)
+-------------------------------------------------------------------------------
+Language                     files          blank        comment           code
+-------------------------------------------------------------------------------
+TypeScript                       1             33             85            251
+-------------------------------------------------------------------------------
 
 # goto-char-timer
 
@@ -38,9 +43,9 @@ default: abcdefghijklmnopqrstuvwxyz
 
 ## Known Issues
 
-### messes up marked regions
-when it jumps the cursor, it creates a new selected region start and end. it should not do that...
-
 ### lables are longer than they need to be
 if there's enough matches to bump up the label length then all lables are longer even though you might have an unambiguous match at a shorter number of characters
+
+# Run Test
+clear && npm run compile && npm run compile-tests && npx vscode-test
 

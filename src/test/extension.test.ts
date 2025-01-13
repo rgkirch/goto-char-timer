@@ -93,7 +93,7 @@ test('calculateLabelLength should return correct label length', () => {
 });
 
 test('gotoCharTimer should jump to single match immediately', async () => {
-    const editor = createMockEditor();
+    const editor = createMockEditor('some text with target here');
     var inputBox = createMockInputBox();
 
     sinon.stub(vscode.window, 'createInputBox').returns(inputBox);
@@ -170,8 +170,7 @@ test('calculatePositionFromOffset should handle multi-line text', () => {
     assert.deepStrictEqual(calculatePositionFromOffset(text, 23), new vscode.Position(2, 0));
 });
 
-function createMockEditor() {
-    const documentText = 'some text with target here';
+function createMockEditor(documentText: string) {
     let currentSelection = new vscode.Selection(0, 0, 0, 0);
 
     return {
@@ -190,7 +189,6 @@ function createMockEditor() {
         set selection(sel: vscode.Selection) { currentSelection = sel; },
         revealRange: sinon.stub(),
         visibleRanges: [new vscode.Range(0, 0, 0, documentText.length)]
-
     };
 }
 
